@@ -19,7 +19,7 @@ export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave;
         <div><div className="kicker">META PROGRESSION · ADVANTAGE TREE</div><h2>우위 선점</h2></div>
         <span className="spacer" />
         <span className="mono mute">선점한 우위 {meta.unlocked.length} / {META_TREE.length}</span>
-        <span className="chip">보유 기억 파편 <b>{meta.fragments}</b></span>
+        <span className="chip icon-btn"><Icon name="fragment" size={14} /> 보유 기억 파편 <b>{meta.fragments}</b></span>
         <button className="btn ghost" onClick={onRefund} disabled={!meta.unlocked.length}>초기화 (전액 환불)</button>
       </div>
       <div className="tree-scroll">

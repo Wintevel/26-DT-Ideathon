@@ -29,7 +29,7 @@ export function Hub({ meta, onStart, onTree, onCodex, onReset }: { meta: MetaSav
           <h1>거울 프로토콜</h1>
           <div className="sub">DOPPELGANGER PROTOCOL · 침묵 회랑 침투 작전</div>
         </div>
-        <div className="frag"><Icon name="mirror" size={16} /> 보유 기억 파편<b>{meta.fragments}</b></div>
+        <div className="frag"><Icon name="fragment" size={16} /> 보유 기억 파편<b>{meta.fragments}</b></div>
         <div className="menu">
           <button className="btn solid icon-btn" onClick={start} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
             <Icon name="launch" size={18} /> 출격 준비
@@ -57,36 +57,46 @@ export function Hub({ meta, onStart, onTree, onCodex, onReset }: { meta: MetaSav
 // ─── 출격 준비 1: 프로토콜 심도 ────────────────────────
 export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number; setDepth: (d: number) => void; onBack: () => void; onNext: () => void }) {
   const d = DEPTHS[depth];
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setDepth(Math.min(DEPTHS.length - 1, depth + 1)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setDepth(Math.max(0, depth - 1)); }
+      else if (e.key === 'Enter') onNext();
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [depth, setDepth, onNext]);
   return (
     <div className="screen">
       <div className="head">
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 허브로</button>
         <div><div className="kicker">PRE-LAUNCH · STEP 1 / 2</div><h2>프로토콜 심도 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>심도가 높을수록 기억 파편 획득 배율이 증가합니다</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>아래로 내려갈수록 어렵고, 기억 파편을 더 얻습니다 · ↑↓ 키</span>
       </div>
-      <div className="wrap">
-        <div className="depth-row">
+      <div className="wrap strata-wrap">
+        <div className="strata" style={{ ['--d' as string]: depth }}>
+          <div className="surface"><span>SURFACE</span><i /></div>
+          <div className="shaft"><span className="cable" /><span className="probe"><Icon name="antenna" size={16} /></span></div>
           {DEPTHS.map((x) => (
-            <button key={x.lv} className={`depth-big ${depth === x.lv ? 'on' : ''}`} onClick={() => setDepth(x.lv)}>
-              <span className="lv">DEPTH {String(x.lv).padStart(2, '0')}</span>
-              <span className="ic"><Icon name={DEPTH_ICON[x.lv]} size={54} stroke={1.3} /></span>
+            <button key={x.lv} className={`stratum s${x.lv} ${depth === x.lv ? 'on' : ''} ${x.lv < depth ? 'passed' : ''}`} style={{ ['--i' as string]: x.lv }} onClick={() => setDepth(x.lv)}>
+              <span className="lv">−{String(x.lv).padStart(2, '0')}</span>
+              <span className="ic"><Icon name={DEPTH_ICON[x.lv]} size={26} stroke={1.4} /></span>
               <b>{x.name}</b>
               <span className="meta"><span>적 체력 {Math.round(x.mult * 100)}%</span><span>파편 ×{x.frag}</span></span>
-              <span className="gauge">{Array.from({ length: 5 }, (_, i) => <i key={i} className={i <= x.lv ? 'on' : ''} />)}</span>
             </button>
           ))}
+          <div className="bedrock">CORE · 아크</div>
         </div>
-        <div className="depth-detail">
-          <Icon name={DEPTH_ICON[depth]} size={28} />
-          <div>
-            <div className="mono mute" style={{ fontSize: 11 }}>DEPTH {String(depth).padStart(2, '0')} · 기억 파편 ×{d.frag}</div>
-            <b>{d.name}</b>
-            <div className="mute">{d.rule}</div>
-          </div>
-          <span className="spacer" />
-          <button className="btn solid icon-btn" onClick={onNext}>분대 선택 <Icon name="launch" size={16} /></button>
-        </div>
+        <aside className="strata-detail" key={depth}>
+          <div className="mono mute" style={{ fontSize: 11, letterSpacing: '.14em' }}>DEPTH −{String(depth).padStart(2, '0')}</div>
+          <div className="big-ic"><Icon name={DEPTH_ICON[depth]} size={64} stroke={1.2} /></div>
+          <b>{d.name}</b>
+          <p className="mute">{d.rule}</p>
+          <div className="stat-row"><span><Icon name="heart" size={14} /> 적 체력 {Math.round(d.mult * 100)}%</span><span><Icon name="fragment" size={14} /> 파편 ×{d.frag}</span></div>
+          <div className="gauge">{DEPTHS.map((_, i) => <i key={i} className={i <= depth ? 'on' : ''} />)}</div>
+          <button className="btn solid icon-btn" onClick={onNext}>이 심도로 하강 <Icon name="descend" size={16} /></button>
+        </aside>
       </div>
     </div>
   );
