@@ -5,7 +5,9 @@ import {
   mimicPreview, needsTarget, playCard, summarize, tierBounds, tierOf, TIER_NAMES,
 } from '../game/engine';
 import type { CombatState, EnemyInst, FxEvent, Intent } from '../game/types';
-import { CardView, Silhouette } from './common';
+import { CardView } from './common';
+import { Icon } from './Icons';
+import { Portrait } from './Portraits';
 import { Emblem } from './Emblem';
 import { fly, floatText, pulse, shake, sleep } from './fx';
 
@@ -53,19 +55,20 @@ function playFx(events: FxEvent[], s: CombatState) {
   }
 }
 
-function intentText(s: CombatState, e: EnemyInst, it: Intent) {
-  const parts: string[] = [];
+const INTENT_ICON: Record<string, string> = { attack: 'sword', defend: 'shield', buff: 'buff', debuff: 'debuff', echo: 'echo', summon: 'summon', seal: 'seal' };
+function IntentBits({ s, e, it }: { s: CombatState; e: EnemyInst; it: Intent }) {
+  const bits: JSX.Element[] = [];
   if (it.dmg) {
     const v = enemyHitValue(s, e, it.dmg);
-    parts.push(`⚔ ${v}${(it.hits ?? 1) > 1 ? `×${it.hits}` : ''}`);
+    bits.push(<span key="d" className="bit"><Icon name="sword" size={13} />{v}{(it.hits ?? 1) > 1 ? `×${it.hits}` : ''}</span>);
   }
-  if (it.block) parts.push(`◇ ${it.block}`);
-  if (it.str) parts.push(`▲ 강화 ${it.str}`);
-  if (it.weak) parts.push(`약화 ${it.weak}`);
-  if (it.vuln) parts.push(`취약 ${it.vuln}`);
-  if (it.kind === 'summon') parts.push('잔상 생성');
-  if (it.kind === 'seal' && !it.dmg) parts.push('손패 봉인');
-  return parts.join('  ');
+  if (it.block) bits.push(<span key="b" className="bit"><Icon name="shield" size={13} />{it.block}</span>);
+  if (it.str) bits.push(<span key="s" className="bit"><Icon name="buff" size={13} />{it.str}</span>);
+  if (it.weak) bits.push(<span key="w" className="bit"><Icon name="debuff" size={13} />약화 {it.weak}</span>);
+  if (it.vuln) bits.push(<span key="v" className="bit"><Icon name="debuff" size={13} />취약 {it.vuln}</span>);
+  if (it.kind === 'summon') bits.push(<span key="m" className="bit"><Icon name="summon" size={13} />분열</span>);
+  if (it.kind === 'seal' && !it.dmg) bits.push(<span key="l" className="bit"><Icon name="seal" size={13} />봉인</span>);
+  return <>{bits}</>;
 }
 
 export function Combat({ initial, introEvents, onEnd, onTick }: { initial: CombatState; introEvents: FxEvent[]; onEnd: (s: CombatState) => void; onTick?: (v: { hp: number; erosion: number }) => void }) {
@@ -201,7 +204,7 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
           </div>
           <div className="unit player" data-fx="player">
             {s.player.block > 0 && <span className="blk">{s.player.block}</span>}
-            <Silhouette />
+            <div className="pt-frame"><Portrait kind={s.ctx.squad} size={92} /></div>
             <div className="nm">본체</div>
             <div className="sub">상태: {TIER_NAMES[tier]}</div>
             <div className="hp"><i style={{ width: `${(s.player.hp / s.player.maxHp) * 100}%` }} /></div>
@@ -239,10 +242,11 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
               >
                 {e.block > 0 && <span className="blk">{e.block}</span>}
                 <div className={`intent ${atk ? 'atk' : ''} ${e.mimicked ? 'mim' : ''} ${it.kind === 'echo' ? 'echo' : ''} ${intro ? 'hide' : ''}`}>
+                  <Icon name={INTENT_ICON[it.kind]} size={15} />
                   <span>{it.label}</span>
-                  <span className="v">{intentText(s, e, it)}</span>
+                  <span className="v"><IntentBits s={s} e={e} it={it} /></span>
                 </div>
-                <Silhouette boss={def.tier === 'boss'} />
+                <div className="pt-frame"><Portrait kind={e.defId} squad={s.ctx.squad} size={92} /></div>
                 <div className="nm">{e.name}</div>
                 <div className="sub">{e.mimicked ? '모사됨 · 위력 감소' : def.tier === 'elite' ? '정예 복제체' : def.tier === 'boss' ? '구역 보스' : '복제체'}</div>
                 <div className="hp"><i style={{ width: `${(e.hp / e.maxHp) * 100}%` }} /></div>

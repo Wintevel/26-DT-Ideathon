@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ENEMIES } from '../game/data';
 import { startCombat } from '../game/engine';
 import { clearSave, emptySave, loadSave, record, refundAll, writeSave } from '../game/meta';
@@ -11,9 +11,10 @@ import { META } from '../game/data';
 import { Combat } from './Combat';
 import { DeckModal, RelicModal, TopBar } from './common';
 import { CodexView, TreeView } from './MetaScreens';
-import { EventView, Hub, MapView, RestView, ResultView, RewardView, Setup, ShopView } from './screens';
+import { DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
+import { getLastPoint, PixelWipe } from './PixelWipe';
 
-type Screen = 'hub' | 'setup' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex';
+type Screen = 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex';
 
 export function App() {
   const [meta, setMetaRaw] = useState<MetaSave>(() => loadSave());
@@ -27,6 +28,16 @@ export function App() {
   const [modal, setModal] = useState<'deck' | 'relic' | null>(null);
   const [codexNew, setCodexNew] = useState(0);
   const [live, setLive] = useState<{ hp: number; erosion: number } | null>(null);
+  const [depth, setDepth] = useState(0);
+  const [wipe, setWipe] = useState<{ fn: () => void; key: number; origin: { x: number; y: number } } | null>(null);
+  const [burst, setBurst] = useState(false);
+  const wiping = useRef(false);
+  /** 화면을 바꾸는 동작은 사각 전환이 화면을 다 덮은 순간에 실행한다 */
+  const T = <A extends unknown[]>(fn: (...a: A) => void) => (...a: A) => {
+    if (wiping.current) return;
+    wiping.current = true;
+    setWipe({ fn: () => fn(...a), key: Date.now(), origin: getLastPoint() });
+  };
 
   const setMeta = useCallback((m: MetaSave) => {
     setMetaRaw(m);
@@ -39,7 +50,7 @@ export function App() {
   };
 
   // ── 출격 ──
-  const launch = (squad: string, depth: number) => {
+  const launch = (squad: string) => {
     const r = newRun(squad, depth, meta.unlocked);
     let m = rec(meta, 'cards', r.deck.map((c) => c.id)).save;
     m = rec(m, 'relics', r.relics).save;
@@ -145,7 +156,7 @@ export function App() {
     if (changed.length) setMeta(rec(meta, 'cards', changed).save);
     setRun(res.run);
     setEvState({ ...evState, result: res.msg, needRemove: !!res.needRemove });
-    if (res.run.erosion >= 100) setTimeout(() => finish(res.run, 'eroded'), 1200);
+    if (res.run.erosion >= 100) setTimeout(T(() => finish(res.run, 'eroded')), 1200);
   };
 
   const shopBuy = (i: number) => {
@@ -185,16 +196,17 @@ export function App() {
       {screen === 'hub' && (
         <Hub
           meta={meta}
-          onStart={() => setScreen('setup')}
-          onTree={() => setScreen('tree')}
-          onCodex={() => setScreen('codex')}
+          onStart={() => { setScreen('depth'); setBurst(true); setTimeout(() => setBurst(false), 700); }}
+          onTree={T(() => setScreen('tree'))}
+          onCodex={T(() => setScreen('codex'))}
           onReset={() => { if (confirmReset()) { clearSave(); setMeta(emptySave()); } }}
         />
       )}
-      {screen === 'setup' && <Setup onBack={() => setScreen('hub')} onLaunch={launch} />}
-      {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={enterNode} />}
-      {screen === 'combat' && combat && <Combat key={combat.key} initial={combat.s} introEvents={combat.ev} onEnd={combatEnd} onTick={setLive} />}
-      {screen === 'reward' && run && reward && <RewardView run={run} reward={reward} meta={meta.unlocked} onDone={rewardDone} />}
+      {screen === 'depth' && <DepthSelect depth={depth} setDepth={setDepth} onBack={T(() => setScreen('hub'))} onNext={T(() => setScreen('squad'))} />}
+      {screen === 'squad' && <SquadSelect depth={depth} onBack={T(() => setScreen('depth'))} onLaunch={T(launch)} />}
+      {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={T(enterNode)} />}
+      {screen === 'combat' && combat && <Combat key={combat.key} initial={combat.s} introEvents={combat.ev} onEnd={T(combatEnd)} onTick={setLive} />}
+      {screen === 'reward' && run && reward && <RewardView run={run} reward={reward} meta={meta.unlocked} onDone={T(rewardDone)} />}
       {screen === 'event' && run && evState && (
         <EventView
           eventId={evState.id}
@@ -202,34 +214,43 @@ export function App() {
           result={evState.result}
           needRemove={evState.needRemove}
           onChoose={chooseEvent}
-          onContinue={() => clearNode(run)}
+          onContinue={T(() => clearNode(run))}
           onRemove={(uid) => { const r = removeCard(run, uid); setEvState({ ...evState, needRemove: false, result: '카드를 두고 나왔다. 무엇이었는지 벌써 기억나지 않는다.' }); setRun(r); }}
         />
       )}
       {screen === 'rest' && run && (
         <RestView
           run={run}
-          onRest={(o) => {
+          onRest={T((o: 'heal' | 'compose') => {
             const r = structuredClone(run);
             if (o === 'heal') r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.3));
             else r.erosion = Math.max(0, r.erosion - 15);
             clearNode(r);
-          }}
+          })}
         />
       )}
-      {screen === 'shop' && run && <ShopView run={run} meta={meta.unlocked} stock={stock} onBuy={shopBuy} onService={shopService} onLeave={() => clearNode(run)} />}
-      {screen === 'result' && result && <ResultView {...result} onHub={() => setScreen('hub')} />}
+      {screen === 'shop' && run && <ShopView run={run} meta={meta.unlocked} stock={stock} onBuy={shopBuy} onService={shopService} onLeave={T(() => clearNode(run))} />}
+      {screen === 'result' && result && <ResultView {...result} onHub={T(() => setScreen('hub'))} />}
       {screen === 'tree' && (
         <TreeView
           meta={meta}
-          onBack={() => setScreen('hub')}
+          onBack={T(() => setScreen('hub'))}
           onUnlock={(id) => setMeta({ ...meta, fragments: meta.fragments - META[id].cost, unlocked: [...meta.unlocked, id] })}
           onRefund={() => setMeta(refundAll(meta))}
         />
       )}
-      {screen === 'codex' && <CodexView meta={meta} onBack={() => setScreen('hub')} />}
+      {screen === 'codex' && <CodexView meta={meta} onBack={T(() => setScreen('hub'))} />}
       {modal === 'deck' && run && <DeckModal cards={run.deck} title={`현재 덱 ${run.deck.length}장`} onClose={() => setModal(null)} />}
       {modal === 'relic' && run && <RelicModal relics={run.relics} onClose={() => setModal(null)} />}
+      {wipe && (
+        <PixelWipe
+          key={wipe.key}
+          origin={wipe.origin}
+          onCovered={() => { wipe.fn(); window.scrollTo(0, 0); }}
+          onDone={() => { setWipe(null); wiping.current = false; }}
+        />
+      )}
+      {burst && <div className="burst-out" />}
     </div>
   );
 }

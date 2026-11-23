@@ -2,6 +2,7 @@ import { CARDS, ENEMIES, RELICS, SQUADS } from '../game/data';
 import { defOf, tierOf, TIER_NAMES } from '../game/engine';
 import type { CardInst, RunState } from '../game/types';
 import { nodeById, STAGES } from '../game/run';
+import { Icon } from './Icons';
 
 const GLYPH: Record<string, JSX.Element> = {
   전술: <svg width="22" height="14" viewBox="0 0 22 14"><path d="M2 12 L20 2" stroke="currentColor" strokeWidth="2" /></svg>,
@@ -48,13 +49,13 @@ export function TopBar({ run, meta, onDeck, onRelics }: { run: RunState; meta: s
         SECTOR 01 / 침묵 회랑
         <small>{stage === STAGES - 1 ? 'BOSS' : `STAGE ${String(stage + 1).padStart(2, '0')}`} · DEPTH {String(run.depth).padStart(2, '0')}</small>
       </div>
-      <div className="stat">HP <span className="bar"><i style={{ width: `${(run.hp / run.maxHp) * 100}%` }} /></span><b>{run.hp}/{run.maxHp}</b></div>
-      <div className="stat" data-fx="erosion-top">침식 <span className={`bar ero ${t >= 2 ? 'hot' : ''}`}><i style={{ width: `${run.erosion}%` }} /></span><b>{run.erosion}%</b> <span className="mute">{TIER_NAMES[t]}</span></div>
-      <div className="stat">각뿔 <b>{run.kakpul}</b></div>
-      <div className="stat">거울 모사 <b>{run.mirrorCharges}회</b></div>
+      <div className="stat"><Icon name="heart" size={15} /> HP <span className="bar"><i style={{ width: `${(run.hp / run.maxHp) * 100}%` }} /></span><b>{run.hp}/{run.maxHp}</b></div>
+      <div className="stat" data-fx="erosion-top"><Icon name="erosion" size={15} /> 침식 <span className={`bar ero ${t >= 2 ? 'hot' : ''}`}><i style={{ width: `${run.erosion}%` }} /></span><b>{run.erosion}%</b> <span className="mute">{TIER_NAMES[t]}</span></div>
+      <div className="stat"><Icon name="kakpul" size={15} /> 각뿔 <b>{run.kakpul}</b></div>
+      <div className="stat"><Icon name="mirror" size={15} /> 거울 모사 <b>{run.mirrorCharges}회</b></div>
       <span className="spacer" />
-      <button className="chip" onClick={onDeck}>덱 ({run.deck.length})</button>
-      <button className="chip" onClick={onRelics}>소장품 ({run.relics.length})</button>
+      <button className="chip icon-btn" onClick={onDeck}><Icon name="deck" size={14} /> 덱 ({run.deck.length})</button>
+      <button className="chip icon-btn" onClick={onRelics}><Icon name="relic" size={14} /> 소장품 ({run.relics.length})</button>
     </div>
   );
 }
@@ -87,7 +88,7 @@ export function RelicModal({ relics, onClose }: { relics: string[]; onClose: () 
           <button className="btn ghost" onClick={onClose}>닫기</button>
         </div>
         {relics.map((id) => (
-          <div className="relic" key={id}><div className="ico"><span>{RELICS[id].name[0]}</span></div><div><b>{RELICS[id].name}</b><div className="mute">{RELICS[id].text}</div></div></div>
+          <div className="relic" key={id}><div className="ico"><span><Icon name="relic" size={20} /></span></div><div><b>{RELICS[id].name}</b><div className="mute">{RELICS[id].text}</div></div></div>
         ))}
       </div>
     </div>

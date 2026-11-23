@@ -416,3 +416,120 @@ button:disabled { cursor: not-allowed; }
   .topbar { gap: 12px; padding: 10px 16px; }
   .wrap, .head, .map-wrap, .mapfoot { padding-left: 16px; padding-right: 16px; }
 }
+
+/* ───────── v2: 아이콘 · 프로필 · 전환 ───────── */
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.topbar .stat svg { color: var(--mute); }
+
+/* 화면 전환 */
+.pixelwipe { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 500; pointer-events: all; }
+.burst-out { position: fixed; inset: 0; z-index: 400; background: var(--fg); pointer-events: none; animation: burstOut .7s ease-out forwards; }
+@keyframes burstOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* 허브 마름모 */
+.hub-emblem { position: relative; width: 260px; height: 260px; display: grid; place-items: center; }
+.hub-emblem .emblem { transition: opacity .35s, transform .35s; }
+.hub-emblem .emblem.dim { opacity: .18; transform: scale(.92); }
+.launch-diamond { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; pointer-events: none; opacity: 0; transform: scale(.4) rotate(45deg); transition: opacity .3s, transform .4s cubic-bezier(.3,1.6,.5,1); }
+.launch-diamond::before { content: ''; position: absolute; inset: 0; border: 2px solid var(--fg); }
+.launch-diamond span { position: absolute; inset: 26px; background: var(--fg); }
+.launch-diamond.on { opacity: 1; transform: scale(1) rotate(45deg); animation: bob 1.8s ease-in-out .4s infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0) scale(1) rotate(45deg); } 50% { transform: translateY(-14px) scale(1.04) rotate(45deg); } }
+.launch-diamond.go { opacity: 1; animation: none; transform: rotate(45deg) scale(1); transition: none; }
+.launch-diamond.go span { animation: dgrow .9s cubic-bezier(.7,0,.2,1) forwards; }
+.launch-diamond.go::before { animation: dring .9s ease-out forwards; }
+@keyframes dgrow { 0% { transform: scale(1); } 25% { transform: scale(.7); } 100% { transform: scale(40); } }
+@keyframes dring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(6); opacity: 0; } }
+.hub.launching .launch-diamond { z-index: 50; }
+.hub.launching .menu, .hub.launching h1, .hub.launching .sub { transition: opacity .3s; opacity: 0; }
+
+/* 심도 선택 */
+.depth-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 28px; }
+.depth-big { border: 1px solid var(--line2); background: var(--panel); padding: 22px 16px 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; transition: border-color .15s, transform .2s, background .15s, color .15s; }
+.depth-big .lv { font-family: var(--mono); font-size: 11px; color: var(--mute); letter-spacing: .14em; }
+.depth-big .ic { width: 96px; height: 96px; display: grid; place-items: center; border-radius: 50%; border: 1px dashed var(--line2); transition: transform .3s; }
+.depth-big b { font-size: 18px; }
+.depth-big .meta { display: flex; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--mute); }
+.depth-big .gauge { display: flex; gap: 3px; }
+.depth-big .gauge i { width: 14px; height: 4px; background: var(--line2); }
+.depth-big .gauge i.on { background: var(--fg); }
+.depth-big:hover { border-color: var(--fg); transform: translateY(-4px); }
+.depth-big:hover .ic { transform: rotate(-12deg) scale(1.05); }
+.depth-big.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.depth-big.on .lv, .depth-big.on .meta { color: #55554f; }
+.depth-big.on .ic { border-color: var(--bg); animation: spin 14s linear infinite; }
+.depth-big.on .gauge i { background: #c9c9c2; } .depth-big.on .gauge i.on { background: var(--bg); }
+.depth-detail { margin-top: 18px; border: 1px solid var(--line2); background: var(--panel); padding: 18px 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.depth-detail b { display: block; font-size: 18px; margin: 2px 0; }
+.depth-detail .spacer { flex: 1; }
+@media (max-width: 860px) { .depth-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* 분대 */
+.squad-top { display: flex; gap: 16px; align-items: center; }
+.squad-pt { width: 110px; height: 110px; border: 1px solid var(--line2); background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(242,242,238,.04) 3px 4px); flex: none; display: grid; place-items: center; overflow: hidden; }
+.squad.on .squad-pt { border-color: var(--fg); }
+.squad .tag { display: inline-flex; align-items: center; gap: 6px; }
+.squad li { display: flex; align-items: center; gap: 8px; }
+.squad li::before { content: none; }
+
+/* 프로필 */
+.pt-frame { width: 100px; height: 100px; margin: 0 auto 10px; border: 1px solid var(--line2); display: grid; place-items: center; overflow: hidden; background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(242,242,238,.04) 3px 4px); }
+.enemy.boss .pt-frame { border-color: var(--fg); }
+.portrait { display: block; overflow: visible; }
+.pt-blink { animation: ptBlink 1.4s steps(2) infinite; }
+@keyframes ptBlink { 50% { opacity: .15; } }
+.pt-scan { animation: ptScan 2.2s ease-in-out infinite alternate; }
+@keyframes ptScan { to { transform: translateX(30px); } }
+.pt-scanred { animation: ptScanR 1.8s ease-in-out infinite alternate; }
+@keyframes ptScanR { to { transform: translateX(28px); } }
+.pt-drift { animation: ptDrift 2.6s ease-in-out infinite; }
+@keyframes ptDrift { 50% { transform: translateX(-8px); opacity: .35; } }
+.pt-wobble { transform-origin: 60px 64px; animation: ptWob 3s ease-in-out infinite; }
+@keyframes ptWob { 33% { transform: scale(1.04, .97); } 66% { transform: scale(.97, 1.04); } }
+.pt-lid { transform-origin: 60px 44px; transform: scaleY(0); animation: ptLid 4s infinite; }
+@keyframes ptLid { 0%, 90%, 100% { transform: scaleY(0); } 94% { transform: scaleY(1); } }
+.pt-look { animation: ptLook 5s ease-in-out infinite; }
+@keyframes ptLook { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-6px); } 60% { transform: translateX(6px); } }
+.pt-chomp { transform-origin: 60px 72px; animation: ptChomp 1.6s ease-in-out infinite; }
+@keyframes ptChomp { 50% { transform: scaleY(.55); } }
+.pt-f1, .pt-f2, .pt-f3 { animation: ptF 3s steps(1) infinite; }
+.pt-f2 { animation-delay: -1s; } .pt-f3 { animation-delay: -2s; }
+@keyframes ptF { 0% { opacity: 1; } 33% { opacity: .15; } 66% { opacity: .5; } }
+.pt-spin { animation: spin 12s linear infinite; }
+.pt-spin-slow { animation: spin 24s linear infinite; }
+
+/* 의도 아이콘 */
+.intent { gap: 6px; }
+.intent .v { display: inline-flex; gap: 8px; }
+.intent .bit { display: inline-flex; align-items: center; gap: 3px; }
+
+/* 도감 홈: 박스 없이 아이콘 */
+.codex-home button { border: 0; background: none; padding: 10px; gap: 10px; }
+.codex-home button:hover { transform: none; }
+.ci-wrap { position: relative; width: 150px; height: 150px; display: grid; place-items: center; transition: transform .35s cubic-bezier(.3,1.4,.5,1); }
+.ci-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed var(--line2); transition: border-color .2s; }
+.codex-icon { position: relative; transition: filter .3s; }
+.codex-home button:hover .ci-wrap { transform: translateY(-10px); }
+.codex-home button:hover .ci-ring { border-color: var(--fg); animation: spin 8s linear infinite; }
+.codex-home button:hover .codex-icon { filter: drop-shadow(0 0 12px rgba(242,242,238,.35)); }
+.ci-back { transform-origin: 70px 64px; transition: transform .4s; }
+.codex-home button:hover .ci-back { transform: translateX(10px) rotate(6deg); }
+.ci-spark { animation: ptBlink 1.2s steps(2) infinite; } .ci-spark.d2 { animation-delay: .6s; }
+.ci-rot { animation: spin 16s linear infinite; }
+.ci-path { animation: dash 1s linear infinite; }
+.ci-shard { animation: ptDrift 2s ease-in-out infinite; }
+.tab { display: inline-flex; align-items: center; gap: 8px; }
+
+/* 트리 */
+.tnode .o svg { display: block; }
+.tnode .c { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: -4px; }
+.tnode.avail .c { color: var(--mute); }
+.tnode.own .c { color: var(--fg); }
+
+/* 선택지 아이콘 */
+.ev-opt.with-ic { display: grid; grid-template-columns: 34px 1fr; column-gap: 12px; align-items: center; }
+.ev-opt.with-ic svg { grid-row: span 2; }
+.relic .ico span { display: grid; }
+.codex-home { margin-block: auto; }
+.entry.with-pt .pt-frame { float: right; width: 88px; height: 88px; margin: 0 0 8px 12px; }
+.pt-frame.unseen .portrait { filter: brightness(0) invert(.18); }

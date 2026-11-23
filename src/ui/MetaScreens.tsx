@@ -3,7 +3,9 @@ import { CARD_LIST, ENEMY_LIST, EVENTS, META, META_TREE, RELIC_LIST, ABSORB_OF }
 import { canUnlock, reqMet } from '../game/meta';
 import type { MetaSave } from '../game/types';
 import { CardView, squadName } from './common';
-import { Emblem } from './Emblem';
+import { CodexIcon } from './CodexIcons';
+import { Portrait } from './Portraits';
+import { Icon } from './Icons';
 
 // ─── 우위 선점 ─────────────────────────────────────────
 export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave; onBack: () => void; onUnlock: (id: string) => void; onRefund: () => void }) {
@@ -13,7 +15,7 @@ export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave;
   return (
     <div className="screen">
       <div className="head">
-        <button className="btn ghost" onClick={onBack}>← 허브로</button>
+        <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 허브로</button>
         <div><div className="kicker">META PROGRESSION · ADVANTAGE TREE</div><h2>우위 선점</h2></div>
         <span className="spacer" />
         <span className="mono mute">선점한 우위 {meta.unlocked.length} / {META_TREE.length}</span>
@@ -36,8 +38,9 @@ export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave;
             const avail = !owned && reqMet(meta, m.id);
             return (
               <button key={m.id} className={`tnode ${m.core ? 'core' : ''} ${owned ? 'own' : ''} ${avail ? 'avail' : ''} ${sel === m.id ? 'sel' : ''}`} style={{ left: `${m.x}%`, top: `${m.y}%` }} onClick={() => setSel(m.id)}>
-                <span className="o"><span>{m.cost}</span></span>
+                <span className="o"><span><Icon name={m.id} size={m.core ? 24 : 20} /></span></span>
                 <span className="l">{m.name}</span>
+                <span className="c">{owned ? '선점' : `파편 ${m.cost}`}</span>
               </button>
             );
           })}
@@ -45,7 +48,7 @@ export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave;
       </div>
       <div className="treefoot">
         <div style={{ width: 56, height: 56, border: '1px solid var(--fg)', display: 'grid', placeItems: 'center', transform: n.core ? 'rotate(45deg)' : undefined }}>
-          <span style={{ transform: n.core ? 'rotate(-45deg)' : undefined, fontFamily: 'var(--display)' }}>{n.name[0]}</span>
+          <span style={{ transform: n.core ? 'rotate(-45deg)' : undefined, display: 'grid' }}><Icon name={n.id} size={24} /></span>
         </div>
         <div className="info">
           <div className="kicker mono mute" style={{ fontSize: 11 }}>{n.core ? '핵심 우위' : '우위'}{n.req.length ? ` · 선행: ${n.req.map((r) => META[r].name).join(' 또는 ')}` : ''}</div>
@@ -75,7 +78,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
   return (
     <div className="screen">
       <div className="head">
-        <button className="btn ghost" onClick={() => (tab === 'home' ? onBack() : setTab('home'))}>← {tab === 'home' ? '허브로' : '데이터 뱅크'}</button>
+        <button className="btn ghost icon-btn" onClick={() => (tab === 'home' ? onBack() : setTab('home'))}><Icon name="back" size={16} /> {tab === 'home' ? '허브로' : '데이터 뱅크'}</button>
         <div><div className="kicker">DATA BANK ARCHIVE</div><h2>데이터 뱅크 · 도감</h2></div>
         <span className="spacer" />
         <span className="mono mute" style={{ fontSize: 12 }}>작전 중 획득 · 조우 · 모사한 항목이 자동으로 기록됩니다</span>
@@ -84,7 +87,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
         <div className="codex-home">
           {sections.map((s) => (
             <button key={s.id} onClick={() => setTab(s.id)}>
-              <Emblem size={90} erosion={s.er} />
+              <span className="ci-wrap"><span className="ci-ring" /><CodexIcon kind={s.id} /></span>
               <b>{s.name}</b>
               <small>{s.sub}</small>
               <span className="cnt">{s.cnt}</span>
@@ -95,7 +98,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
         <>
           <div className="tabs">
             {sections.map((s) => (
-              <button key={s.id} className={`tab ${tab === s.id ? 'on' : ''}`} onClick={() => setTab(s.id)}>{s.name}<small>{s.cnt}</small></button>
+              <button key={s.id} className={`tab ${tab === s.id ? 'on' : ''}`} onClick={() => setTab(s.id)}><CodexIcon kind={s.id} size={22} />{s.name}<small>{s.cnt}</small></button>
             ))}
           </div>
           <div className="codex-grid">
@@ -112,7 +115,8 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
               const mim = c.enemiesMimicked.includes(e.id);
               const abs = ABSORB_OF[e.id];
               return (
-                <div key={e.id} className={`entry ${seen ? '' : 'lock'}`}>
+                <div key={e.id} className={`entry with-pt ${seen ? '' : 'lock'}`}>
+                  <div className={`pt-frame ${seen ? '' : 'unseen'}`}><Portrait kind={e.id} squad={meta.archive[meta.archive.length - 1]?.squad ?? 'scout'} size={84} /></div>
                   <div className="tagrow">{e.tier === 'boss' ? '구역 보스' : e.tier === 'elite' ? '정예' : e.tier === 'minion' ? '잔상' : '복제체'} · {mim ? '패턴 해독 완료' : seen ? '실루엣만 기록' : '미조우'}</div>
                   <h4>{seen ? e.name : '???'}</h4>
                   {seen && <p>체력 {e.hp[0]}{e.hp[1] !== e.hp[0] ? `~${e.hp[1]}` : ''}</p>}
