@@ -9,7 +9,7 @@ import { DEPTH_ICON, Icon, SQUAD_ICON } from './Icons';
 import { Portrait } from './Portraits';
 
 // ─── 허브 ──────────────────────────────────────────────
-export function Hub({ meta, onStart, onTree, onCodex, onReset }: { meta: MetaSave; onStart: () => void; onTree: () => void; onCodex: () => void; onReset: () => void }) {
+export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset }: { meta: MetaSave; onStart: () => void; onTree: () => void; onCodex: () => void; onGuide: () => void; onReset: () => void }) {
   const [hover, setHover] = useState(false);
   const [launching, setLaunching] = useState(false);
   const start = () => {
@@ -37,7 +37,10 @@ export function Hub({ meta, onStart, onTree, onCodex, onReset }: { meta: MetaSav
           <button className="btn icon-btn" onClick={onTree}><Icon name="tree" size={18} /> 우위 선점</button>
           <button className="btn icon-btn" onClick={onCodex}><Icon name="codex" size={18} /> 데이터 뱅크 · 도감</button>
         </div>
-        <button className="btn ghost" style={{ fontSize: 11, padding: '6px 12px' }} onClick={onReset}>기록 초기화</button>
+        <div className="hub-sub">
+          <button className="btn ghost icon-btn" onClick={onGuide}><Icon name="codex" size={13} /> 작전 교본 · 튜토리얼</button>
+          <button className="btn ghost reset" onClick={onReset}>기록 초기화</button>
+        </div>
       </div>
       <div className="right">
         <div>작전 {meta.runs}회 · 정화 {meta.clears}회</div>

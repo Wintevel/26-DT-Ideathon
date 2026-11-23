@@ -11,10 +11,11 @@ import { META } from '../game/data';
 import { Combat } from './Combat';
 import { DeckModal, RelicModal, TopBar } from './common';
 import { CodexView, TreeView } from './MetaScreens';
+import { GuideView } from './Guide';
 import { DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
 
-type Screen = 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex';
+type Screen = 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
 
 export function App() {
   const [meta, setMetaRaw] = useState<MetaSave>(() => loadSave());
@@ -199,6 +200,7 @@ export function App() {
           onStart={() => { setScreen('depth'); setBurst(true); setTimeout(() => setBurst(false), 700); }}
           onTree={T(() => setScreen('tree'))}
           onCodex={T(() => setScreen('codex'))}
+          onGuide={T(() => setScreen('guide'))}
           onReset={() => { if (confirmReset()) { clearSave(); setMeta(emptySave()); } }}
         />
       )}
@@ -239,6 +241,7 @@ export function App() {
           onRefund={() => setMeta(refundAll(meta))}
         />
       )}
+      {screen === 'guide' && <GuideView onBack={T(() => setScreen('hub'))} />}
       {screen === 'codex' && <CodexView meta={meta} onBack={T(() => setScreen('hub'))} />}
       {modal === 'deck' && run && <DeckModal cards={run.deck} title={`현재 덱 ${run.deck.length}장`} onClose={() => setModal(null)} />}
       {modal === 'relic' && run && <RelicModal relics={run.relics} onClose={() => setModal(null)} />}
@@ -261,7 +264,7 @@ function confirmReset() {
   const now = Date.now();
   if (now - resetArmed < 2500) return true;
   resetArmed = now;
-  const b = document.querySelector('.hub .btn.ghost');
+  const b = document.querySelector('.hub .btn.reset');
   if (b) b.textContent = '한 번 더 누르면 초기화';
   setTimeout(() => { if (b) b.textContent = '기록 초기화'; }, 2500);
   return false;
