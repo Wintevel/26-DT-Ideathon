@@ -1,0 +1,249 @@
+import { useCallback, useState } from 'react';
+import { ENEMIES } from '../game/data';
+import { startCombat } from '../game/engine';
+import { clearSave, emptySave, loadSave, record, refundAll, writeSave } from '../game/meta';
+import {
+  absorb, addCard, applyCombatResult, makeReward, newRun, nodeById, priceOf, removeCard, resolveEvent, settle, shopStock, topPlayed,
+  type Reward, type Settlement,
+} from '../game/run';
+import type { CombatState, FxEvent, MetaSave, RunState } from '../game/types';
+import { META } from '../game/data';
+import { Combat } from './Combat';
+import { DeckModal, RelicModal, TopBar } from './common';
+import { CodexView, TreeView } from './MetaScreens';
+import { EventView, Hub, MapView, RestView, ResultView, RewardView, Setup, ShopView } from './screens';
+
+type Screen = 'hub' | 'setup' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex';
+
+export function App() {
+  const [meta, setMetaRaw] = useState<MetaSave>(() => loadSave());
+  const [screen, setScreen] = useState<Screen>('hub');
+  const [run, setRun] = useState<RunState | null>(null);
+  const [combat, setCombat] = useState<{ s: CombatState; ev: FxEvent[]; key: number } | null>(null);
+  const [reward, setReward] = useState<Reward | null>(null);
+  const [evState, setEvState] = useState<{ id: string; result: string | null; needRemove: boolean } | null>(null);
+  const [stock, setStock] = useState<{ id: string; price: number; sold?: boolean }[]>([]);
+  const [result, setResult] = useState<{ outcome: 'win' | 'lose' | 'eroded'; settle: Settlement; archived: boolean; newCodex: number; run: RunState } | null>(null);
+  const [modal, setModal] = useState<'deck' | 'relic' | null>(null);
+  const [codexNew, setCodexNew] = useState(0);
+  const [live, setLive] = useState<{ hp: number; erosion: number } | null>(null);
+
+  const setMeta = useCallback((m: MetaSave) => {
+    setMetaRaw(m);
+    writeSave(m);
+  }, []);
+  const rec = (m: MetaSave, key: keyof MetaSave['codex'], ids: string[]) => {
+    const r = record(m, key, ids);
+    if (r.added.length) setCodexNew((n) => n + r.added.length);
+    return r;
+  };
+
+  // ── 출격 ──
+  const launch = (squad: string, depth: number) => {
+    const r = newRun(squad, depth, meta.unlocked);
+    let m = rec(meta, 'cards', r.deck.map((c) => c.id)).save;
+    m = rec(m, 'relics', r.relics).save;
+    setMeta(m);
+    setCodexNew(0);
+    setRun(r);
+    setScreen('map');
+  };
+
+  const enterNode = (id: string) => {
+    if (!run) return;
+    const n = nodeById(run, id);
+    const r: RunState = { ...run, pos: id, visited: [...run.visited, id] };
+    setRun(r);
+    if (n.type === 'combat' || n.type === 'elite' || n.type === 'boss') {
+      const kind = n.type === 'elite' ? 'elite' : n.type === 'boss' ? 'boss' : 'normal';
+      const st = startCombat(r, n.encounter!, kind, meta.unlocked, meta.archive);
+      setMeta(rec(meta, 'enemiesSeen', n.encounter!).save);
+      setCombat({ s: st.state, ev: st.events, key: Date.now() });
+      setScreen('combat');
+    } else if (n.type === 'event') {
+      setMeta(rec(meta, 'events', [n.eventId!]).save);
+      setEvState({ id: n.eventId!, result: null, needRemove: false });
+      setScreen('event');
+    } else if (n.type === 'rest') setScreen('rest');
+    else if (n.type === 'shop') {
+      setStock(shopStock());
+      setScreen('shop');
+    }
+  };
+
+  const clearNode = (r: RunState) => {
+    const x = structuredClone(r);
+    x.stats.nodesCleared += 1;
+    setRun(x);
+    setScreen('map');
+  };
+
+  const finish = (r: RunState, outcome: 'win' | 'lose' | 'eroded') => {
+    let m = { ...meta };
+    const st = settle(r, outcome, m);
+    const archived = outcome === 'eroded';
+    m = rec(m, 'cards', r.deck.map((c) => c.id)).save;
+    if (archived) {
+      const cards = topPlayed(r, 5);
+      m.archive = [...m.archive, { at: new Date().toLocaleDateString('ko-KR'), squad: r.squad, depth: r.depth, cards: cards.length ? cards : ['cut', 'guard'] }].slice(-8);
+    }
+    m.fragments += st.total + codexNew;
+    if (codexNew) st.lines.push([`도감 신규 기록 ${codexNew}건`, codexNew]);
+    st.total += codexNew;
+    m.runs += 1;
+    if (outcome === 'win') m.clears += 1;
+    setMeta(m);
+    setResult({ outcome, settle: st, archived, newCodex: codexNew, run: r });
+    setRun(null);
+    setCombat(null);
+    setScreen('result');
+  };
+
+  const combatEnd = (cs: CombatState) => {
+    if (!run) return;
+    let r = applyCombatResult(run, cs);
+    // 도감: 모사한 적
+    let m = meta;
+    const rr = rec(m, 'enemiesMimicked', cs.mimickedFrom);
+    m = rr.save;
+    r.stats.newMimics.push(...rr.added);
+    setMeta(m);
+    if (cs.over === 'lose' || cs.over === 'eroded') return finish(r, cs.over);
+    if (cs.kind === 'elite') r.stats.elites += 1;
+    if (cs.kind === 'boss') {
+      r.stats.bossKilled = true;
+      r.stats.nodesCleared += 1;
+      return finish(r, 'win');
+    }
+    const rw = makeReward(r, cs);
+    r.kakpul += rw.kakpul;
+    if (rw.relic) {
+      r.relics = [...r.relics, rw.relic];
+      setMeta(rec(m, 'relics', [rw.relic]).save);
+    }
+    setRun(r);
+    setReward(rw);
+    setScreen('reward');
+  };
+
+  const rewardDone = (card: string | null, abs: string | null) => {
+    if (!run) return;
+    let r = run;
+    const ids: string[] = [];
+    if (card) { r = addCard(r, card); ids.push(card); }
+    if (abs) { r = absorb(r, abs); ids.push(abs); }
+    if (ids.length) setMeta(rec(meta, 'cards', ids).save);
+    if (r.erosion >= 100) return finish(r, 'eroded');
+    clearNode(r);
+  };
+
+  const chooseEvent = (i: number) => {
+    if (!run || !evState) return;
+    const before = run.deck.map((c) => c.id);
+    const res = resolveEvent(run, evState.id, i);
+    const changed = res.run.deck.map((c) => c.id).filter((id, k) => id !== before[k]);
+    if (changed.length) setMeta(rec(meta, 'cards', changed).save);
+    setRun(res.run);
+    setEvState({ ...evState, result: res.msg, needRemove: !!res.needRemove });
+    if (res.run.erosion >= 100) setTimeout(() => finish(res.run, 'eroded'), 1200);
+  };
+
+  const shopBuy = (i: number) => {
+    if (!run) return;
+    const it = stock[i];
+    const p = priceOf(it.price, meta.unlocked);
+    if (it.sold || run.kakpul < p) return;
+    let r = addCard(run, it.id);
+    r.kakpul -= p;
+    setRun(r);
+    setMeta(rec(meta, 'cards', [it.id]).save);
+    setStock(stock.map((s, k) => (k === i ? { ...s, sold: true } : s)));
+  };
+  const shopService = (k: 'remove' | 'purge' | 'charge', uid?: number) => {
+    if (!run) return;
+    const cost = priceOf(k === 'remove' ? 50 : k === 'purge' ? 45 : 60, meta.unlocked);
+    if (run.kakpul < cost) return;
+    let r = k === 'remove' && uid != null ? removeCard(run, uid) : structuredClone(run);
+    r.kakpul -= cost;
+    if (k === 'purge') r.erosion = Math.max(0, r.erosion - 10);
+    if (k === 'charge') r.mirrorCharges += 1;
+    setRun(r);
+  };
+
+  const inRun = run && ['map', 'combat', 'reward', 'event', 'rest', 'shop'].includes(screen);
+
+  return (
+    <div className="app">
+      {inRun && run && (
+        <TopBar
+          run={live && screen === 'combat' ? { ...run, hp: live.hp, erosion: live.erosion } : run}
+          meta={meta.unlocked}
+          onDeck={() => setModal('deck')}
+          onRelics={() => setModal('relic')}
+        />
+      )}
+      {screen === 'hub' && (
+        <Hub
+          meta={meta}
+          onStart={() => setScreen('setup')}
+          onTree={() => setScreen('tree')}
+          onCodex={() => setScreen('codex')}
+          onReset={() => { if (confirmReset()) { clearSave(); setMeta(emptySave()); } }}
+        />
+      )}
+      {screen === 'setup' && <Setup onBack={() => setScreen('hub')} onLaunch={launch} />}
+      {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={enterNode} />}
+      {screen === 'combat' && combat && <Combat key={combat.key} initial={combat.s} introEvents={combat.ev} onEnd={combatEnd} onTick={setLive} />}
+      {screen === 'reward' && run && reward && <RewardView run={run} reward={reward} meta={meta.unlocked} onDone={rewardDone} />}
+      {screen === 'event' && run && evState && (
+        <EventView
+          eventId={evState.id}
+          run={run}
+          result={evState.result}
+          needRemove={evState.needRemove}
+          onChoose={chooseEvent}
+          onContinue={() => clearNode(run)}
+          onRemove={(uid) => { const r = removeCard(run, uid); setEvState({ ...evState, needRemove: false, result: '카드를 두고 나왔다. 무엇이었는지 벌써 기억나지 않는다.' }); setRun(r); }}
+        />
+      )}
+      {screen === 'rest' && run && (
+        <RestView
+          run={run}
+          onRest={(o) => {
+            const r = structuredClone(run);
+            if (o === 'heal') r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.3));
+            else r.erosion = Math.max(0, r.erosion - 15);
+            clearNode(r);
+          }}
+        />
+      )}
+      {screen === 'shop' && run && <ShopView run={run} meta={meta.unlocked} stock={stock} onBuy={shopBuy} onService={shopService} onLeave={() => clearNode(run)} />}
+      {screen === 'result' && result && <ResultView {...result} onHub={() => setScreen('hub')} />}
+      {screen === 'tree' && (
+        <TreeView
+          meta={meta}
+          onBack={() => setScreen('hub')}
+          onUnlock={(id) => setMeta({ ...meta, fragments: meta.fragments - META[id].cost, unlocked: [...meta.unlocked, id] })}
+          onRefund={() => setMeta(refundAll(meta))}
+        />
+      )}
+      {screen === 'codex' && <CodexView meta={meta} onBack={() => setScreen('hub')} />}
+      {modal === 'deck' && run && <DeckModal cards={run.deck} title={`현재 덱 ${run.deck.length}장`} onClose={() => setModal(null)} />}
+      {modal === 'relic' && run && <RelicModal relics={run.relics} onClose={() => setModal(null)} />}
+    </div>
+  );
+}
+
+// 브라우저 확인창 대신, 두 번 눌러야 초기화되게 한다
+let resetArmed = 0;
+function confirmReset() {
+  const now = Date.now();
+  if (now - resetArmed < 2500) return true;
+  resetArmed = now;
+  const b = document.querySelector('.hub .btn.ghost');
+  if (b) b.textContent = '한 번 더 누르면 초기화';
+  setTimeout(() => { if (b) b.textContent = '기록 초기화'; }, 2500);
+  return false;
+}
+
+export const enemyName = (id: string) => ENEMIES[id]?.name;
