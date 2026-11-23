@@ -38,7 +38,7 @@ export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave;
             const avail = !owned && reqMet(meta, m.id);
             return (
               <button key={m.id} className={`tnode ${m.core ? 'core' : ''} ${owned ? 'own' : ''} ${avail ? 'avail' : ''} ${sel === m.id ? 'sel' : ''}`} style={{ left: `${m.x}%`, top: `${m.y}%` }} onClick={() => setSel(m.id)}>
-                <span className="o"><span><Icon name={m.id} size={m.core ? 24 : 20} /></span></span>
+                <span className="o"><span><Icon name={m.id} size={m.core ? 28 : 24} stroke={1.5} /></span></span>
                 <span className="l">{m.name}</span>
                 <span className="c">{owned ? '선점' : `파편 ${m.cost}`}</span>
               </button>
