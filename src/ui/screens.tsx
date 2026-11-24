@@ -239,7 +239,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
   const reach = reachable(run);
   const cur = currentStage(run);
   useEffect(() => {
-    const t = setTimeout(() => setScan(false), 1700);
+    const t = setTimeout(() => setScan(false), 3300);
     return () => clearTimeout(t);
   }, [run.pos]);
 
@@ -282,6 +282,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
             {curNode && (
               <div className="radar" style={{ left: `${X(curNode.stage)}%`, top: `${Y(curNode.y)}%` }}>
                 {scan && <div className="sweep" />}
+                {scan && run.pos && <><span className="wave" /><span className="wave w2" /></>}
                 <i /><i /><i />
               </div>
             )}
@@ -291,11 +292,13 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
               const isCur = n.id === run.pos;
               const past = run.visited.includes(n.id) && !isCur;
               const justRevealed = n.stage === cur + 1 && !isHidden;
+              const wake = scan && isReach && !!curNode;
+              const wd = curNode ? 0.85 + Math.hypot((X(n.stage) - X(curNode.stage)) * 1.6, Y(n.y) - Y(curNode.y)) * 0.016 : 0;
               return (
                 <div
                   key={n.id}
-                  className={`node ${isHidden ? '' : n.type} ${isHidden ? 'hidden' : ''} ${isReach ? 'reach' : ''} ${isCur ? 'cur' : ''} ${past ? 'past' : ''} ${justRevealed && scan ? 'reveal' : ''}`}
-                  style={{ left: `${X(n.stage)}%`, top: `${Y(n.y)}%`, animationDelay: justRevealed && scan ? `${0.5 + n.idx * 0.25}s` : undefined }}
+                  className={`node ${isHidden ? '' : n.type} ${isHidden ? 'hidden' : ''} ${isReach ? 'reach' : ''} ${isCur ? 'cur' : ''} ${past ? 'past' : ''} ${wake ? 'wake' : justRevealed && scan ? 'reveal' : ''}`}
+                  style={{ left: `${X(n.stage)}%`, top: `${Y(n.y)}%`, animationDelay: !wake && justRevealed && scan ? `${0.5 + n.idx * 0.25}s` : undefined, ['--wd' as string]: `${wd}s` }}
                   onClick={() => isReach && onEnter(n.id)}
                   onMouseEnter={() => !isHidden && setSel(n.id)}
                 >
@@ -480,16 +483,42 @@ export function ShopView({ run, meta, stock, onBuy, onService, onLeave }: {
 }
 
 // ─── 결과 ──────────────────────────────────────────────
-export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: { outcome: 'win' | 'lose' | 'eroded'; run: RunState; settle: Settlement; archived: boolean; newCodex: number; onHub: () => void }) {
-  const title = outcome === 'win' ? 'SECTOR CLEARED' : outcome === 'eroded' ? 'REPLACED' : 'SIGNAL LOST';
-  const sub = outcome === 'win' ? '구역 정화 완료. 거울 속의 당신을 넘어섰습니다.' : outcome === 'eroded' ? '침식 100%. 당신은 원형이 되었습니다.' : '신호 소실. 본체의 기록이 회수됩니다.';
-  const top = useMemo(() => Object.entries(run.stats.playCounts).sort((a, b) => b[1] - a[1]).slice(0, 3), [run]);
+export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: { outcome: 'win' | 'lose' | 'eroded' | 'abort'; run: RunState; settle: Settlement; archived: boolean; newCodex: number; onHub: () => void }) {
+  const title = { win: 'SECTOR CLEARED', eroded: 'REPLACED', lose: 'SIGNAL LOST', abort: 'MISSION ABORTED' }[outcome];
+  const sub = {
+    win: '구역 정화 완료. 거울 속의 당신을 넘어섰습니다.',
+    eroded: '침식 100%. 당신은 원형이 되었습니다.',
+    lose: '신호 소실. 본체의 기록이 회수됩니다.',
+    abort: '출격을 취소했습니다. 이번 작전의 보상은 없지만 기록은 남습니다.',
+  }[outcome];
+  const st = run.stats;
+  const top = useMemo(() => Object.entries(st.playCounts).sort((a, b) => b[1] - a[1]).slice(0, 3), [st]);
+  const plays = Object.values(st.playCounts).reduce((a, n) => a + n, 0);
+  const sq = SQUADS.find((x) => x.id === run.squad);
+  const cells: [string, string, string][] = [
+    ['descend', '돌파 구역', `${st.nodesCleared} / ${STAGES}`],
+    ['combat', '전투 · 정예', `${st.combats} · ${st.elites}`],
+    ['recall', '진행 턴', `${st.turns ?? 0}`],
+    ['deck', '사용 카드', `${plays}장`],
+    ['sword', '가한 피해', `${st.dealt ?? 0}`],
+    ['heart', '받은 피해', `${st.taken ?? 0}`],
+    ['mirror', '모사 · 흡수', `${st.mimics ?? 0} · ${st.absorbed.length}`],
+    ['erosion', '최고 침식', `${st.peakErosion ?? run.erosion}%`],
+    ['kakpul', '획득 각뿔', `${st.kakpulEarned ?? 0}`],
+    ['relic', '덱 · 소장품', `${run.deck.length} · ${run.relics.length}`],
+  ];
   return (
     <div className="screen">
       <div className="center-wrap" style={{ justifyContent: 'center' }}>
-        <Emblem size={180} erosion={outcome === 'eroded' ? 100 : run.erosion} />
-        <div className={`big-title ${outcome !== 'win' ? 'out' : ''}`}>{title}</div>
+        <Emblem size={150} erosion={outcome === 'eroded' ? 100 : run.erosion} />
+        <div className={`big-title ${outcome !== 'win' ? 'out' : ''} ${outcome === 'abort' ? 'abort' : ''}`}>{title}</div>
         <div className="mute">{sub}</div>
+        <div className="mono mute" style={{ fontSize: 11, letterSpacing: '.14em', marginTop: 4 }}>{sq?.name ?? run.squad} · DEPTH {depthLabel(run.depth)} {depthDef(run.depth).name} · 최종 체력 {run.hp}/{run.maxHp}</div>
+        <div className="runstats">
+          {cells.map(([ic, k, v], i) => (
+            <div key={k} style={{ animationDelay: `${0.15 + i * 0.05}s` }}><Icon name={ic} size={16} /><span>{k}</span><b>{v}</b></div>
+          ))}
+        </div>
         <div className="settle">
           {settle.lines.map(([k, v]) => <div key={k}><span>{k}</span><span>{v ? `+${v}` : ''}</span></div>)}
           <div className="tot"><span>획득 기억 파편</span><span>+{settle.total}</span></div>

@@ -86,3 +86,18 @@ export function KeywordTip() {
     </div>
   );
 }
+
+/** 출격 취소 전환: 위에서 아래로 빨강/검정 격자가 내려와 화면을 덮었다가 아래로 빠진다. */
+export function GridDrop() {
+  const cols = 16, rows = 10;
+  return (
+    <div className="griddrop" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
+      {Array.from({ length: cols * rows }, (_, i) => {
+        const r = Math.floor(i / cols), c = i % cols;
+        const red = (r + c) % 3 === 0 || (r * 7 + c * 3) % 5 === 0;
+        return <i key={i} className={red ? 'r' : ''} style={{ ['--d' as string]: `${r * 0.055 + ((c * 37) % 7) * 0.012}s` }} />;
+      })}
+      <b>MISSION ABORTED</b>
+    </div>
+  );
+}

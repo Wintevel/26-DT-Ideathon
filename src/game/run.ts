@@ -110,6 +110,11 @@ export function applyCombatResult(run: RunState, cs: CombatState): RunState {
   r.erosion = cs.erosion;
   for (const [id, n] of Object.entries(cs.playCounts)) r.stats.playCounts[id] = (r.stats.playCounts[id] ?? 0) + n;
   r.stats.combats += 1;
+  r.stats.dealt = (r.stats.dealt ?? 0) + (cs.dealt ?? 0);
+  r.stats.taken = (r.stats.taken ?? 0) + (cs.taken ?? 0);
+  r.stats.mimics = (r.stats.mimics ?? 0) + cs.mimicsThisCombat;
+  r.stats.turns = (r.stats.turns ?? 0) + cs.turn;
+  r.stats.peakErosion = Math.max(r.stats.peakErosion ?? 0, cs.erosion);
   return r;
 }
 
@@ -163,8 +168,8 @@ export function resolveEvent(run: RunState, eventId: string, opt: number): { run
       }
       return { run: r, msg: '거울을 덮었다. 손바닥 아래로 체온이 느껴진다.' };
     case 'antenna':
-      if (opt === 0) { r.revealAll = true; r.kakpul += 15; return { run: r, msg: '신호가 잡혔다. 이번 구역의 모든 통로가 보인다.' }; }
-      r.kakpul += 40; ero(5);
+      if (opt === 0) { r.revealAll = true; r.kakpul += 15; r.stats.kakpulEarned = (r.stats.kakpulEarned ?? 0) + 15; return { run: r, msg: '신호가 잡혔다. 이번 구역의 모든 통로가 보인다.' }; }
+      r.kakpul += 40; r.stats.kakpulEarned = (r.stats.kakpulEarned ?? 0) + 40; ero(5);
       return { run: r, msg: '부품을 챙겼다. 잡음이 머릿속에 남는다.' };
     case 'broken':
       if (opt === 0) { r.hp = Math.max(1, r.hp - 8); ero(-12); return { run: r, msg: '손이 베였지만, 조각 속 얼굴이 내 것이라는 걸 확인했다.' }; }
@@ -192,7 +197,8 @@ export const priceOf = (base: number, meta: string[]) => Math.round(base * (meta
 
 // ─── 정산 ──────────────────────────────────────────────
 export interface Settlement { lines: [string, number][]; total: number }
-export function settle(run: RunState, outcome: 'lose' | 'eroded' | 'win', meta: MetaSave): Settlement {
+export function settle(run: RunState, outcome: 'lose' | 'eroded' | 'win' | 'abort', meta: MetaSave): Settlement {
+  if (outcome === 'abort') return { lines: [['출격 취소 · 보상 없음', 0]], total: 0 };
   const s = run.stats;
   const lines: [string, number][] = [
     ['돌파 노드', s.nodesCleared * 2],

@@ -874,3 +874,40 @@ button:disabled { cursor: not-allowed; }
 .stat.down i { color: var(--danger); border-color: currentColor; rotate: 225deg; }
 .float.small.up { background: var(--accent); }
 .float.small.down { background: var(--danger); color: #fff; }
+
+/* ── v7: 출격 취소 격자 하강 ── */
+.griddrop { position: fixed; inset: 0; z-index: 9990; display: grid; pointer-events: all; }
+.griddrop i { background: #050505; border: 1px solid #1a0505; animation: gdIn .22s cubic-bezier(.3,0,.2,1) var(--d) both, gdOut .3s ease-in calc(var(--d) + 1.15s) forwards; }
+.griddrop i.r { background: #c42a2a; border-color: #8a1818; }
+@keyframes gdIn { from { transform: translateY(-110%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes gdOut { to { transform: translateY(110%); opacity: 0; } }
+.griddrop b { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--display); font-size: clamp(32px, 6vw, 72px); letter-spacing: .12em; color: #fff; background: #050505; padding: 6px 22px; border: 2px solid #c42a2a; animation: gdTxt 1.6s steps(1) both; white-space: nowrap; }
+@keyframes gdTxt { 0% { opacity: 0; } 38% { opacity: 1; } 45% { opacity: 0; } 50% { opacity: 1; } 78% { opacity: 1; } 79% { opacity: 0; } 100% { opacity: 0; } }
+
+/* ── v7: 클리어 후 레이더 확산 → 다음 방 점등 ── */
+.radar .wave { position: absolute; left: -20px; top: -20px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 50%, transparent); animation: wave 1.6s cubic-bezier(.2,.6,.3,1) .65s both; }
+.radar .wave.w2 { border-width: 1px; animation-delay: .95s; }
+@keyframes wave { 0% { transform: scale(.3); opacity: 1; } 80% { opacity: .5; } 100% { transform: scale(26); opacity: 0; } }
+.node.reach.wake { animation: nodeOn .6s steps(5) var(--wd) both, nodeGlow 1.6s ease-in-out calc(var(--wd) + .6s) infinite; }
+.node.reach.wake::before, .node.reach.wake::after { animation-delay: calc(var(--wd) + .6s); }
+.node.reach.wake::after { animation-delay: calc(var(--wd) + 1.6s); }
+@keyframes nodeOn {
+  0% { opacity: .25; border-color: var(--line2); filter: grayscale(1) brightness(.5); }
+  40% { opacity: 1; filter: invert(1); border-color: var(--accent); }
+  60% { opacity: .4; filter: none; }
+  100% { opacity: 1; border-color: var(--accent); filter: none; }
+}
+
+/* ── v7: 소장품 버튼 글자를 덱과 같게 ── */
+.relic-btn > span:last-child { font-family: var(--mono); font-size: 15px; letter-spacing: .04em; color: var(--fg); }
+.relic-btn > span:last-child b { font-size: 18px; }
+.relic-btn .rb-grid i.on { background: var(--fg); border-color: var(--fg); }
+
+/* ── v7: 작전 통계 ── */
+.big-title.abort { -webkit-text-stroke-color: var(--danger); }
+.runstats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line2); border: 1px solid var(--line2); width: min(860px, 100%); margin: 16px 0 4px; }
+.runstats > div { background: var(--panel); padding: 12px 14px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; row-gap: 4px; align-items: center; animation: rwIn .4s ease-out both; }
+.runstats svg { color: var(--mute); }
+.runstats span { font-size: 11px; color: var(--mute); font-family: var(--mono); }
+.runstats b { grid-column: 1 / -1; font-family: var(--mono); font-size: 20px; }
+@media (max-width: 760px) { .runstats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

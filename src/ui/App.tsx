@@ -13,12 +13,13 @@ import { Combat } from './Combat';
 import { DeckModal, TopBar } from './common';
 import { CodexView, TreeView } from './MetaScreens';
 import { GuideView } from './Guide';
-import { CursorPing, KeywordTip, MapMenu } from './Overlays';
+import { CursorPing, GridDrop, KeywordTip, MapMenu } from './Overlays';
 import { RelicDrawer } from './RelicGrid';
 import { clearRun, loadRun, saveRun } from './runSave';
 import { DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
 
+export type Outcome = 'win' | 'lose' | 'eroded' | 'abort';
 type Screen = 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
 
 export function App() {
@@ -29,7 +30,7 @@ export function App() {
   const [reward, setReward] = useState<Reward | null>(null);
   const [evState, setEvState] = useState<{ id: string; result: string | null; needRemove: boolean } | null>(null);
   const [stock, setStock] = useState<{ id: string; price: number; sold?: boolean }[]>([]);
-  const [result, setResult] = useState<{ outcome: 'win' | 'lose' | 'eroded'; settle: Settlement; archived: boolean; newCodex: number; run: RunState } | null>(null);
+  const [result, setResult] = useState<{ outcome: Outcome; settle: Settlement; archived: boolean; newCodex: number; run: RunState } | null>(null);
   const [modal, setModal] = useState<'deck' | 'relic' | null>(null);
   const [codexNew, setCodexNew] = useState(0);
   const [live, setLive] = useState<{ hp: number; erosion: number } | null>(null);
@@ -96,8 +97,10 @@ export function App() {
     setScreen('map');
   };
 
-  const finish = (r: RunState, outcome: 'win' | 'lose' | 'eroded') => {
+  const finish = (r0: RunState, outcome: Outcome) => {
     clearRun();
+    const r = structuredClone(r0);
+    r.stats.peakErosion = Math.max(r.stats.peakErosion ?? 0, r.erosion);
     let m = { ...meta };
     const st = settle(r, outcome, m);
     const archived = outcome === 'eroded';
@@ -106,9 +109,10 @@ export function App() {
       const cards = topPlayed(r, 5);
       m.archive = [...m.archive, { at: new Date().toLocaleDateString('ko-KR'), squad: r.squad, depth: r.depth, cards: cards.length ? cards : ['cut', 'guard'] }].slice(-8);
     }
-    m.fragments += st.total + codexNew;
-    if (codexNew) st.lines.push([`도감 신규 기록 ${codexNew}건`, codexNew]);
-    st.total += codexNew;
+    const codexBonus = outcome === 'abort' ? 0 : codexNew;
+    m.fragments += st.total + codexBonus;
+    if (codexBonus) st.lines.push([`도감 신규 기록 ${codexBonus}건`, codexBonus]);
+    st.total += codexBonus;
     m.runs += 1;
     if (outcome === 'win') m.clears += 1;
     setMeta(m);
@@ -139,6 +143,7 @@ export function App() {
     }
     const rw = makeReward(r, cs);
     r.kakpul += rw.kakpul;
+    r.stats.kakpulEarned = (r.stats.kakpulEarned ?? 0) + rw.kakpul;
     if (rw.relic) {
       r.relics = [...r.relics, rw.relic];
       r.relicGrid = autoPlace(r.relicGrid ?? {}, rw.relic);
@@ -209,7 +214,15 @@ export function App() {
     return () => window.removeEventListener('keydown', k);
   }, [screen, modal]);
   const saveAndExit = T(() => { if (run) saveRun(run); setMenu(false); setRun(null); setScreen('hub'); });
-  const abandon = T(() => { clearRun(); setSaved(false); setMenu(false); setRun(null); setScreen('hub'); });
+  const [drop, setDrop] = useState(false);
+  const abandon = () => {
+    if (!run) return;
+    const r = run;
+    setMenu(false);
+    setDrop(true);
+    setTimeout(() => { setSaved(false); finish(r, 'abort'); }, 950);
+    setTimeout(() => setDrop(false), 1900);
+  };
   const resume = T(() => { const r = loadRun(); if (r) { if (!r.relicGrid) r.relicGrid = r.relics.reduce((g, id) => autoPlace(g, id), {} as NonNullable<RunState['relicGrid']>); setRun(r); setCodexNew(0); setScreen('map'); } });
 
   return (
@@ -277,6 +290,7 @@ export function App() {
       {modal === 'deck' && run && <DeckModal cards={run.deck} title={`현재 덱 ${run.deck.length}장`} onClose={() => setModal(null)} />}
       {modal === 'relic' && run && <RelicDrawer relics={run.relics} grid={run.relicGrid ?? Object.fromEntries(run.relics.map((id, i) => [id, { r: i, c: 0, rot: 0 }]))} editable={screen !== 'combat'} onChange={(g) => setRun({ ...run, relicGrid: g })} onClose={() => setModal(null)} />}
       {menu && screen === 'map' && run && <MapMenu onClose={() => setMenu(false)} onSave={saveAndExit} onAbandon={abandon} />}
+      {drop && <GridDrop />}
       <CursorPing />
       <KeywordTip />
       {wipe && (

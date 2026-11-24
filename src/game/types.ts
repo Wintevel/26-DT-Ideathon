@@ -99,6 +99,8 @@ export interface CombatState {
   erosion: number;
   mimickedFrom: string[];
   playCounts: Record<string, number>;
+  dealt?: number;
+  taken?: number;
   sealed: CardInst | null;
   scanned: string[];
   archLabel?: string;
@@ -146,6 +148,12 @@ export interface RunStats {
   playCounts: Record<string, number>;
   absorbed: string[];
   combats: number;
+  dealt?: number;
+  taken?: number;
+  mimics?: number;
+  turns?: number;
+  kakpulEarned?: number;
+  peakErosion?: number;
 }
 
 export interface RunState {

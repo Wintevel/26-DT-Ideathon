@@ -117,6 +117,7 @@ function hitEnemy(s: CombatState, e: EnemyInst, raw: number, ev: FxEvent[]) {
   if (e.vuln > 0) d = Math.floor(d * 1.5);
   const blk = Math.min(e.block, d);
   e.block -= blk;
+  s.dealt = (s.dealt ?? 0) + Math.min(e.hp, d - blk);
   e.hp = Math.max(0, e.hp - (d - blk));
   ev.push({ k: 'dmg', to: `e${e.uid}`, amt: d - blk, blocked: blk });
   if (e.hp <= 0) ev.push({ k: 'die', to: `e${e.uid}` });
@@ -143,6 +144,7 @@ function hitPlayer(s: CombatState, e: EnemyInst, base: number, ev: FxEvent[]) {
   }
   const blk = Math.min(s.player.block, d);
   s.player.block -= blk;
+  s.taken = (s.taken ?? 0) + Math.min(s.player.hp, d - blk);
   s.player.hp = Math.max(0, s.player.hp - (d - blk));
   ev.push({ k: 'dmg', to: 'player', amt: d - blk, blocked: blk });
   if (s.player.hp <= 0) s.over = 'lose';
