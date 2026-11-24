@@ -6,6 +6,7 @@ import { CardView, squadName } from './common';
 import { CodexIcon } from './CodexIcons';
 import { Portrait } from './Portraits';
 import { Icon } from './Icons';
+import { Rich } from './Rich';
 
 // ─── 우위 선점 ─────────────────────────────────────────
 export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave; onBack: () => void; onUnlock: (id: string) => void; onRefund: () => void }) {
@@ -53,7 +54,7 @@ export function TreeView({ meta, onBack, onUnlock, onRefund }: { meta: MetaSave;
         <div className="info">
           <div className="kicker mono mute" style={{ fontSize: 11 }}>{n.core ? '핵심 우위' : '우위'}{n.req.length ? ` · 선행: ${n.req.map((r) => META[r].name).join(' 또는 ')}` : ''}</div>
           <b>{n.name}</b>
-          <div className="mute">{n.text}</div>
+          <div className="mute"><Rich text={n.text} /></div>
         </div>
         <span className="mono">필요 파편 × {n.cost}</span>
         <button className="btn solid" disabled={own || !canUnlock(meta, sel)} onClick={() => onUnlock(sel)}>{own ? '선점 완료' : '우위 선점'}</button>
@@ -107,7 +108,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
               <div key={r.id} className={`entry ${c.relics.includes(r.id) ? '' : 'lock'}`}>
                 <div className="tagrow">{r.pool === 'squad' ? '분대 소장품' : '정예 보상'}</div>
                 <h4>{c.relics.includes(r.id) ? r.name : '???'}</h4>
-                <p>{c.relics.includes(r.id) ? r.text : '획득하면 기록됩니다.'}</p>
+                <p>{c.relics.includes(r.id) ? <Rich text={r.text} /> : '획득하면 기록됩니다.'}</p>
               </div>
             ))}
             {tab === 'enemies' && ENEMY_LIST.map((e) => {
@@ -129,7 +130,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
               <div key={e.id} className={`entry ${c.events.includes(e.id) ? '' : 'lock'}`}>
                 <div className="tagrow">거울 섹터 분기</div>
                 <h4>{c.events.includes(e.id) ? e.name : '???'}</h4>
-                <p>{c.events.includes(e.id) ? e.text : '조우하면 기록됩니다.'}</p>
+                <p>{c.events.includes(e.id) ? <Rich text={e.text} /> : '조우하면 기록됩니다.'}</p>
                 {c.events.includes(e.id) && e.options.map((o) => <p key={o.label}>▸ {o.label}: {o.desc}</p>)}
               </div>
             ))}

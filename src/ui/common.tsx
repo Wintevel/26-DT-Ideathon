@@ -3,6 +3,7 @@ import { defOf, tierOf, TIER_NAMES } from '../game/engine';
 import type { CardInst, RunState } from '../game/types';
 import { nodeById, STAGES } from '../game/run';
 import { Icon } from './Icons';
+import { Rich } from './Rich';
 
 const GLYPH: Record<string, JSX.Element> = {
   전술: <svg width="22" height="14" viewBox="0 0 22 14"><path d="M2 12 L20 2" stroke="currentColor" strokeWidth="2" /></svg>,
@@ -31,7 +32,7 @@ export function CardView({ card, id, cost, disabled, selected, onClick, onHover,
       {!d.unplayable && <span className="cost">{cost ?? d.cost}</span>}
       {eroPreview ? <span className="ero">{eroPreview > 0 ? `+${eroPreview}%` : `${eroPreview}%`}</span> : null}
       <span className="nm">{d.name}</span>
-      <span className="tx">{d.text}</span>
+      <span className="tx"><Rich text={d.text} /></span>
       {src && <span className="src">{src}</span>}
       <span className="glyph">{GLYPH[d.cat]}</span>
       <span className="cat">{inst.mimic ? '모사' : d.cat}</span>
@@ -40,7 +41,7 @@ export function CardView({ card, id, cost, disabled, selected, onClick, onHover,
 }
 const srcName = (id: string) => ENEMIES[id]?.name ?? id;
 
-export function TopBar({ run, meta, onDeck, onRelics }: { run: RunState; meta: string[]; onDeck: () => void; onRelics: () => void }) {
+export function TopBar({ run, meta, onDeck, onRelics, onMenu, onMap }: { run: RunState; meta: string[]; onDeck: () => void; onRelics: () => void; onMenu: () => void; onMap: boolean }) {
   const stage = run.pos ? nodeById(run, run.pos).stage : 0;
   const t = tierOf(run.erosion, meta);
   return (
@@ -54,8 +55,9 @@ export function TopBar({ run, meta, onDeck, onRelics }: { run: RunState; meta: s
       <div className="stat"><Icon name="kakpul" size={15} /> 각뿔 <b>{run.kakpul}</b></div>
       <div className="stat"><Icon name="mirror" size={15} /> 거울 모사 <b>{run.mirrorCharges}회</b></div>
       <span className="spacer" />
-      <button className="chip icon-btn" onClick={onDeck}><Icon name="deck" size={14} /> 덱 ({run.deck.length})</button>
-      <button className="chip icon-btn" onClick={onRelics}><Icon name="relic" size={14} /> 소장품 ({run.relics.length})</button>
+      {!onMap && <button className="chip icon-btn" onClick={onDeck}><Icon name="deck" size={14} /> 덱 ({run.deck.length})</button>}
+      {!onMap && <button className="chip icon-btn" onClick={onRelics}><Icon name="relic" size={14} /> 소장품 ({run.relics.length})</button>}
+      {onMap && <button className="chip icon-btn menu-btn" onClick={onMenu}><Icon name="archive" size={14} /> 메뉴 <kbd>ESC</kbd></button>}
     </div>
   );
 }
@@ -80,7 +82,7 @@ export function DeckModal({ cards, title, onClose, onPick }: { cards: CardInst[]
 
 export function RelicModal({ relics, onClose }: { relics: string[]; onClose: () => void }) {
   return (
-    <div className="modal" onClick={onClose}>
+    <div className="modal drawer" onClick={onClose}>
       <div className="box" onClick={(e) => e.stopPropagation()}>
         <div className="head" style={{ padding: 0, border: 0 }}>
           <div><div className="kicker">RELICS</div><h2>소장품</h2></div>
@@ -88,7 +90,7 @@ export function RelicModal({ relics, onClose }: { relics: string[]; onClose: () 
           <button className="btn ghost" onClick={onClose}>닫기</button>
         </div>
         {relics.map((id) => (
-          <div className="relic" key={id}><div className="ico"><span><Icon name="relic" size={20} /></span></div><div><b>{RELICS[id].name}</b><div className="mute">{RELICS[id].text}</div></div></div>
+          <div className="relic" key={id}><div className="ico"><span><Icon name="relic" size={20} /></span></div><div><b>{RELICS[id].name}</b><div className="mute"><Rich text={RELICS[id].text} /></div></div></div>
         ))}
       </div>
     </div>

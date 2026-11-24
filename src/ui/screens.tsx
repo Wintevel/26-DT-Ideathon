@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CARDS, DEPTHS, ENEMIES, EVENT_MAP, RELICS, SQUADS } from '../game/data';
 import { erosionGain, tierOf, TIER_NAMES } from '../game/engine';
 import { currentStage, nodeById, priceOf, reachable, STAGES, type Reward, type Settlement } from '../game/run';
@@ -7,9 +7,10 @@ import { CardView, DeckModal } from './common';
 import { Emblem } from './Emblem';
 import { DEPTH_ICON, Icon, SQUAD_ICON } from './Icons';
 import { Portrait } from './Portraits';
+import { Rich } from './Rich';
 
 // ─── 허브 ──────────────────────────────────────────────
-export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset }: { meta: MetaSave; onStart: () => void; onTree: () => void; onCodex: () => void; onGuide: () => void; onReset: () => void }) {
+export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset, onResume }: { meta: MetaSave; onStart: () => void; onTree: () => void; onCodex: () => void; onGuide: () => void; onReset: () => void; onResume?: () => void }) {
   const [hover, setHover] = useState(false);
   const [launching, setLaunching] = useState(false);
   const start = () => {
@@ -31,6 +32,7 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset }: { meta
         </div>
         <div className="frag"><Icon name="fragment" size={16} /> 보유 기억 파편<b>{meta.fragments}</b></div>
         <div className="menu">
+          {onResume && <button className="btn icon-btn resume" onClick={onResume}><Icon name="descend" size={18} /> 작전 이어하기</button>}
           <button className="btn solid icon-btn" onClick={start} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
             <Icon name="launch" size={18} /> 출격 준비
           </button>
@@ -60,6 +62,16 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset }: { meta
 // ─── 출격 준비 1: 프로토콜 심도 ────────────────────────
 export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number; setDepth: (d: number) => void; onBack: () => void; onNext: () => void }) {
   const d = DEPTHS[depth];
+  const box = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState(false);
+  const pick = (clientY: number) => {
+    const el = box.current;
+    if (!el) return;
+    const layers = el.querySelectorAll<HTMLElement>('.stratum');
+    let best = 0;
+    layers.forEach((l, i) => { if (clientY >= l.getBoundingClientRect().top - 4) best = i; });
+    if (best !== depth) setDepth(best);
+  };
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') { e.preventDefault(); setDepth(Math.min(DEPTHS.length - 1, depth + 1)); }
@@ -75,14 +87,22 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 허브로</button>
         <div><div className="kicker">PRE-LAUNCH · STEP 1 / 2</div><h2>프로토콜 심도 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>아래로 내려갈수록 어렵고, 기억 파편을 더 얻습니다 · ↑↓ 키</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>탐침을 아래로 끌어 내려 심도를 고르세요 · ↑↓ 키</span>
       </div>
       <div className="wrap strata-wrap">
-        <div className="strata" style={{ ['--d' as string]: depth }}>
+        <div
+          ref={box}
+          className={`strata ${drag ? 'dragging' : ''}`}
+          style={{ ['--d' as string]: depth }}
+          onPointerDown={(e) => { (e.target as HTMLElement).closest('.strata')?.setPointerCapture(e.pointerId); setDrag(true); pick(e.clientY); }}
+          onPointerMove={(e) => drag && pick(e.clientY)}
+          onPointerUp={() => setDrag(false)}
+          onPointerCancel={() => setDrag(false)}
+        >
           <div className="surface"><span>SURFACE</span><i /></div>
           <div className="shaft"><span className="cable" /><span className="probe"><Icon name="antenna" size={16} /></span></div>
           {DEPTHS.map((x) => (
-            <button key={x.lv} className={`stratum s${x.lv} ${depth === x.lv ? 'on' : ''} ${x.lv < depth ? 'passed' : ''}`} style={{ ['--i' as string]: x.lv }} onClick={() => setDepth(x.lv)}>
+            <button key={x.lv} className={`stratum s${x.lv} ${depth === x.lv ? 'on' : ''} ${x.lv <= depth ? 'fill' : ''}`} style={{ ['--i' as string]: x.lv }}>
               <span className="lv">−{String(x.lv).padStart(2, '0')}</span>
               <span className="ic"><Icon name={DEPTH_ICON[x.lv]} size={26} stroke={1.4} /></span>
               <b>{x.name}</b>
@@ -107,39 +127,48 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
 
 // ─── 출격 준비 2: 전술 분대 ────────────────────────────
 export function SquadSelect({ depth, onBack, onLaunch }: { depth: number; onBack: () => void; onLaunch: (squad: string) => void }) {
-  const [squad, setSquad] = useState('scout');
+  const [squad, setSquad] = useState<string | null>(null);
   return (
     <div className="screen">
       <div className="head">
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 심도 선택</button>
         <div><div className="kicker">PRE-LAUNCH · STEP 2 / 2 · DEPTH {String(depth).padStart(2, '0')} {DEPTHS[depth].name}</div><h2>전술 분대 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>기본 덱 9장 + 분대 고유 카드 2장 + 소장품</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>분대를 누르면 상세 정보가 펼쳐집니다</span>
       </div>
       <div className="wrap">
-        <div className="squads">
-          {SQUADS.map((s) => (
-            <button key={s.id} className={`squad ${squad === s.id ? 'on' : ''}`} onClick={() => setSquad(s.id)}>
-              <div className="squad-top">
-                <div className="squad-pt"><Portrait kind={s.id} size={110} /></div>
-                <div>
+        <div className="squad-row">
+          {SQUADS.map((s) => {
+            const open = squad === s.id;
+            return (
+              <div key={s.id} className={`sq ${open ? 'open' : ''} ${squad && !open ? 'dim' : ''}`}>
+                <button className="sq-face" onClick={() => setSquad(open ? null : s.id)}>
                   <span className="code">{s.code}</span>
+                  <div className="sq-pt"><Portrait kind={s.id} size={150} /></div>
                   <h4>{s.name}</h4>
-                  <span className="tag"><Icon name={SQUAD_ICON[s.id]} size={14} /> {s.tag}</span>
+                  <p><Rich text={s.perks.join(', ')} /></p>
+                  <span className="sq-more">{open ? '접기' : '상세 보기'} <Icon name="back" size={12} style={{ transform: open ? 'none' : 'rotate(180deg)' }} /></span>
+                </button>
+                <div className="sq-detail" aria-hidden={!open}>
+                  <div className="sq-in">
+                    <span className="tag"><Icon name={SQUAD_ICON[s.id]} size={14} /> {s.tag}</span>
+                    <p className="desc"><Rich text={s.desc} /></p>
+                    <div className="sq-stats">
+                      <span><Icon name="heart" size={14} /> 체력 <b>{s.maxHp}</b></span>
+                      <span><Icon name="kakpul" size={14} /> 각뿔 <b>{s.kakpul}</b></span>
+                      <span><Icon name="erosion" size={14} /> 침식 <b>{s.erosion}%</b></span>
+                    </div>
+                    <div className="sq-sec">고유 카드</div>
+                    <div className="sq-cards">{s.cards.map((c) => <CardView key={c} id={c} mini />)}</div>
+                    <div className="sq-sec">시작 소장품</div>
+                    <div className="sq-relic"><Icon name="relic" size={18} /><div><b>{RELICS[s.relic].name}</b><div className="mute"><Rich text={RELICS[s.relic].text} /></div></div></div>
+                    <button className="btn solid icon-btn" tabIndex={open ? 0 : -1} onClick={() => onLaunch(s.id)}><Icon name="launch" size={16} /> 이 분대로 출격</button>
+                  </div>
                 </div>
               </div>
-              <p>{s.desc}</p>
-              <ul>
-                {s.cards.map((c) => <li key={c}><Icon name="deck" size={13} /> 시작 덱에 [{CARDS[c].name}]</li>)}
-                <li><Icon name="relic" size={13} /> 소장품 [{RELICS[s.relic].name}]</li>
-                {s.maxHp !== 75 && <li><Icon name="heart" size={13} /> 최대 체력 {s.maxHp}</li>}
-                {s.kakpul > 0 && <li><Icon name="kakpul" size={13} /> 시작 각뿔 +{s.kakpul}</li>}
-                {s.erosion > 0 && <li><Icon name="erosion" size={13} /> 초기 침식 +{s.erosion}%</li>}
-              </ul>
-            </button>
-          ))}
+            );
+          })}
         </div>
-        <div className="launch"><button className="btn solid icon-btn" onClick={() => onLaunch(squad)}><Icon name="launch" size={16} /> 출격</button></div>
       </div>
     </div>
   );
@@ -170,7 +199,7 @@ function nodeDesc(n: MapNode) {
   return '';
 }
 
-export function MapView({ run, onEnter }: { run: RunState; onEnter: (id: string) => void }) {
+export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onEnter: (id: string) => void; onDeck: () => void; onRelics: () => void }) {
   const [sel, setSel] = useState<string | null>(null);
   const [scan, setScan] = useState(true);
   const reach = reachable(run);
@@ -263,8 +292,13 @@ export function MapView({ run, onEnter }: { run: RunState; onEnter: (id: string)
           </>
         )}
         <span className="spacer" />
-        <span className="facts">덱 {run.deck.length}장 · 돌파 노드 {run.stats.nodesCleared} · 거울 모사 {run.mirrorCharges}회</span>
+        <button className="deck-fan" onClick={onDeck} title="덱 보기">
+          {run.deck.slice(0, 5).map((c, i, a) => <i key={c.uid} style={{ ['--r' as string]: `${(i - (a.length - 1) / 2) * 9}deg`, ['--x' as string]: `${(i - (a.length - 1) / 2) * 12}px` }} />)}
+          <span>덱 <b>{run.deck.length}</b></span>
+        </button>
+        <span className="spacer" />
       </div>
+      <button className="relic-tab" onClick={onRelics}><Icon name="relic" size={16} /><span>소장품 {run.relics.length}</span></button>
     </div>
   );
 }
@@ -311,7 +345,7 @@ export function RewardView({ run, reward, meta, onDone }: { run: RunState; rewar
         {reward.relic && (
           <div className="panel" style={{ marginTop: 14 }}>
             <div className="k">RELIC</div>
-            <div className="relic"><div className="ico"><span><Icon name="relic" size={20} /></span></div><div><b>{RELICS[reward.relic].name}</b><div className="mute">{RELICS[reward.relic].text}</div></div></div>
+            <div className="relic"><div className="ico"><span><Icon name="relic" size={20} /></span></div><div><b>{RELICS[reward.relic].name}</b><div className="mute"><Rich text={RELICS[reward.relic].text} /></div></div></div>
           </div>
         )}
 
@@ -335,11 +369,11 @@ export function EventView({ eventId, run, onChoose, result, onContinue, needRemo
         <div className="panel" style={{ marginTop: 16 }}>
           <div className="k">CHANCE ENCOUNTER · 거울 섹터 분기</div>
           <h3 style={{ fontSize: 22 }}>{ev.name}</h3>
-          <p className="storytext">{result ?? ev.text}</p>
+          <p className="storytext"><Rich text={result ?? ev.text} /></p>
           {!result ? (
             <div className="ev-opts">
               {ev.options.map((o, i) => (
-                <button className="ev-opt" key={o.label} onClick={() => onChoose(i)}><b>{o.label}</b><small>{o.desc}</small></button>
+                <button className="ev-opt" key={o.label} onClick={() => onChoose(i)}><b>{o.label}</b><small><Rich text={o.desc} /></small></button>
               ))}
             </div>
           ) : (

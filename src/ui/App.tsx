@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ENEMIES } from '../game/data';
 import { startCombat } from '../game/engine';
 import { clearSave, emptySave, loadSave, record, refundAll, writeSave } from '../game/meta';
@@ -12,6 +12,8 @@ import { Combat } from './Combat';
 import { DeckModal, RelicModal, TopBar } from './common';
 import { CodexView, TreeView } from './MetaScreens';
 import { GuideView } from './Guide';
+import { CursorPing, MapMenu } from './Overlays';
+import { clearRun, loadRun, saveRun } from './runSave';
 import { DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
 
@@ -91,6 +93,7 @@ export function App() {
   };
 
   const finish = (r: RunState, outcome: 'win' | 'lose' | 'eroded') => {
+    clearRun();
     let m = { ...meta };
     const st = settle(r, outcome, m);
     const archived = outcome === 'eroded';
@@ -183,6 +186,22 @@ export function App() {
   };
 
   const inRun = run && ['map', 'combat', 'reward', 'event', 'rest', 'shop'].includes(screen);
+  const [menu, setMenu] = useState(false);
+  const [saved, setSaved] = useState(() => !!loadRun());
+  // 맵에 있을 때마다 진행 상황 자동 저장
+  useEffect(() => { if (screen === 'map' && run) { saveRun(run); setSaved(true); } }, [screen, run]);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (modal) { setModal(null); return; }
+      if (screen === 'map') setMenu((v) => !v);
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [screen, modal]);
+  const saveAndExit = T(() => { if (run) saveRun(run); setMenu(false); setRun(null); setScreen('hub'); });
+  const abandon = T(() => { clearRun(); setSaved(false); setMenu(false); setRun(null); setScreen('hub'); });
+  const resume = T(() => { const r = loadRun(); if (r) { setRun(r); setCodexNew(0); setScreen('map'); } });
 
   return (
     <div className="app">
@@ -190,8 +209,10 @@ export function App() {
         <TopBar
           run={live && screen === 'combat' ? { ...run, hp: live.hp, erosion: live.erosion } : run}
           meta={meta.unlocked}
+          onMap={screen === 'map'}
           onDeck={() => setModal('deck')}
           onRelics={() => setModal('relic')}
+          onMenu={() => setMenu(true)}
         />
       )}
       {screen === 'hub' && (
@@ -201,12 +222,13 @@ export function App() {
           onTree={T(() => setScreen('tree'))}
           onCodex={T(() => setScreen('codex'))}
           onGuide={T(() => setScreen('guide'))}
+          onResume={saved ? resume : undefined}
           onReset={() => { if (confirmReset()) { clearSave(); setMeta(emptySave()); } }}
         />
       )}
       {screen === 'depth' && <DepthSelect depth={depth} setDepth={setDepth} onBack={T(() => setScreen('hub'))} onNext={T(() => setScreen('squad'))} />}
       {screen === 'squad' && <SquadSelect depth={depth} onBack={T(() => setScreen('depth'))} onLaunch={T(launch)} />}
-      {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={T(enterNode)} />}
+      {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={T(enterNode)} onDeck={() => setModal('deck')} onRelics={() => setModal('relic')} />}
       {screen === 'combat' && combat && <Combat key={combat.key} initial={combat.s} introEvents={combat.ev} onEnd={T(combatEnd)} onTick={setLive} />}
       {screen === 'reward' && run && reward && <RewardView run={run} reward={reward} meta={meta.unlocked} onDone={T(rewardDone)} />}
       {screen === 'event' && run && evState && (
@@ -245,6 +267,8 @@ export function App() {
       {screen === 'codex' && <CodexView meta={meta} onBack={T(() => setScreen('hub'))} />}
       {modal === 'deck' && run && <DeckModal cards={run.deck} title={`현재 덱 ${run.deck.length}장`} onClose={() => setModal(null)} />}
       {modal === 'relic' && run && <RelicModal relics={run.relics} onClose={() => setModal(null)} />}
+      {menu && screen === 'map' && run && <MapMenu onClose={() => setMenu(false)} onSave={saveAndExit} onAbandon={abandon} />}
+      <CursorPing />
       {wipe && (
         <PixelWipe
           key={wipe.key}
