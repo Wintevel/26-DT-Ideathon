@@ -8,6 +8,7 @@ import { Emblem } from './Emblem';
 import { DEPTH_ICON, Icon, SQUAD_ICON } from './Icons';
 import { Portrait } from './Portraits';
 import { Rich } from './Rich';
+import { activeRelics, occupied } from '../game/relicGrid';
 
 // ─── 허브 ──────────────────────────────────────────────
 export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset, onResume }: { meta: MetaSave; onStart: () => void; onTree: () => void; onCodex: () => void; onGuide: () => void; onReset: () => void; onResume?: () => void }) {
@@ -224,7 +225,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
             <div className="k">SECTOR 01 · 제1구역 · DEPTH {String(run.depth).padStart(2, '0')} {DEPTHS[run.depth].name}</div>
             <h2>침묵 회랑 — 다음 통로 선택</h2>
           </div>
-          <div className="k">{run.revealAll ? '안테나 신호: 전 구역 개방' : '전방 미확인 통로는 진출 시 탐색됩니다'} · 보스 표적: 거울 파수꾼 · 아크</div>
+          {run.revealAll && <div className="k">안테나 신호: 전 구역 개방</div>}
         </div>
         <div className="map-scroll">
           <div className="map">
@@ -296,9 +297,12 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
           {run.deck.slice(0, 5).map((c, i, a) => <i key={c.uid} style={{ ['--r' as string]: `${(i - (a.length - 1) / 2) * 9}deg`, ['--x' as string]: `${(i - (a.length - 1) / 2) * 12}px` }} />)}
           <span>덱 <b>{run.deck.length}</b></span>
         </button>
+        <button className="relic-btn" onClick={onRelics} title="소장품 격자">
+          <span className="rb-grid">{Array.from({ length: 9 }, (_, i) => <i key={i} className={occupied(run.relicGrid ?? {}).has(`${Math.floor(i / 3)},${i % 3}`) ? 'on' : ''} />)}</span>
+          <span>소장품 <b>{activeRelics(run).length}/{run.relics.length}</b></span>
+        </button>
         <span className="spacer" />
       </div>
-      <button className="relic-tab" onClick={onRelics}><Icon name="relic" size={16} /><span>소장품 {run.relics.length}</span></button>
     </div>
   );
 }

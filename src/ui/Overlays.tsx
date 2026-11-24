@@ -1,6 +1,7 @@
 // 맵 메뉴(Esc)와 마우스 위치 안테나 파동
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icons';
+import { KW_INFO } from './Rich';
 
 export function MapMenu({ onClose, onSave, onAbandon }: { onClose: () => void; onSave: () => void; onAbandon: () => void }) {
   const [armed, setArmed] = useState(false);
@@ -44,8 +45,44 @@ export function CursorPing() {
   }, []);
   return (
     <>
-      <div ref={el} className="cursor-ping" aria-hidden><i /><i /><b /></div>
+      <div ref={el} className="cursor-ping" aria-hidden><i /><i /></div>
       {bursts.map((b) => <div key={b.id} className="cursor-burst" style={{ left: b.x, top: b.y }} aria-hidden><i /><i /></div>)}
     </>
+  );
+}
+
+/** 키워드 위에 마우스를 잠시 올려 두면 작은 설명 팝업을 띄운다 */
+const KW_DELAY = 2500;
+export function KeywordTip() {
+  const [tip, setTip] = useState<{ k: string; x: number; y: number } | null>(null);
+  useEffect(() => {
+    let timer = 0;
+    let cur: Element | null = null;
+    const over = (e: MouseEvent) => {
+      const t = (e.target as Element | null)?.closest?.('[data-kw]') ?? null;
+      if (t === cur) return;
+      cur = t;
+      clearTimeout(timer);
+      setTip(null);
+      if (!t) return;
+      timer = window.setTimeout(() => {
+        const r = t.getBoundingClientRect();
+        setTip({ k: t.getAttribute('data-kw')!, x: Math.min(window.innerWidth - 250, Math.max(10, r.left)), y: r.bottom + 8 > window.innerHeight - 110 ? r.top - 8 : r.bottom + 8 });
+      }, KW_DELAY);
+    };
+    const hide = () => { clearTimeout(timer); cur = null; setTip(null); };
+    document.addEventListener('mouseover', over);
+    document.addEventListener('pointerdown', hide);
+    window.addEventListener('scroll', hide, true);
+    return () => { clearTimeout(timer); document.removeEventListener('mouseover', over); document.removeEventListener('pointerdown', hide); window.removeEventListener('scroll', hide, true); };
+  }, []);
+  if (!tip || !KW_INFO[tip.k]) return null;
+  const [name, text] = KW_INFO[tip.k];
+  const above = tip.y < 0 || tip.y > window.innerHeight - 110;
+  return (
+    <div className={`kw-tip kw-${tip.k}`} style={{ left: tip.x, top: tip.y, transform: above ? 'translateY(-100%)' : undefined }} role="tooltip">
+      <b>{name}</b>
+      <span>{text}</span>
+    </div>
   );
 }

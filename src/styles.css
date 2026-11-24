@@ -8,6 +8,8 @@
   --line: #262624;
   --line2: #3d3d3a;
   --danger: #ff4a3a;
+  --accent: #46e8c0;
+  --accent-dim: #1d5c4d;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --sans: 'IBM Plex Sans KR', system-ui, sans-serif;
   --display: 'Anton', 'IBM Plex Sans KR', sans-serif;
@@ -726,3 +728,109 @@ button:disabled { cursor: not-allowed; }
 .cursor-burst i + i { border-color: var(--danger); animation-delay: .08s; }
 @keyframes cburst { 0% { opacity: .9; transform: scale(.2); } 100% { opacity: 0; transform: scale(1.8); } }
 @media (pointer: coarse) { .cursor-ping, .cursor-burst { display: none; } }
+
+/* ─── v5: 소장품 격자 ─── */
+.modal.drawer .box.rg { width: min(460px, 100vw); display: flex; flex-direction: column; gap: 14px; padding: 22px; }
+.rg-help { margin: 0; font-size: 12.5px; line-height: 1.6; }
+.rg-help kbd, .rg kbd { font-family: var(--mono); font-size: 10px; border: 1px solid var(--line2); padding: 0 4px; }
+.rg-board { display: flex; gap: 16px; align-items: flex-start; }
+.rg-grid { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 4px; padding: 6px; border: 1px solid var(--line2); background: repeating-linear-gradient(45deg, transparent 0 6px, rgba(242,242,238,.03) 6px 7px); }
+.rg-cell { border: 1px dashed var(--line2); display: grid; place-items: center; font-size: 11px; font-weight: 700; transition: background .12s, border-color .12s; }
+.rg-cell.full { background: var(--t); border: 1px solid var(--t); color: var(--bg); }
+.rg-cell.pv.ok { background: color-mix(in srgb, var(--accent) 45%, transparent); border: 1px solid var(--accent); }
+.rg-cell.pv.bad { background: color-mix(in srgb, var(--danger) 40%, transparent); border: 1px solid var(--danger); }
+.rg-cell:not(:disabled):hover { border-color: var(--fg); }
+.rg-side { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; }
+.rg-held { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--accent); padding: 10px; font-size: 13px; }
+.rg-shape { display: inline-grid; gap: 2px; flex: none; }
+.rg-shape i { display: block; }
+.rg-list { display: flex; flex-direction: column; gap: 6px; }
+.rg-item { display: flex; gap: 12px; align-items: flex-start; text-align: left; border: 1px solid var(--line2); padding: 10px 12px; font-size: 13px; transition: border-color .15s; }
+.rg-item .rg-shape { margin-top: 3px; min-width: 36px; }
+.rg-item .st { font-family: var(--mono); font-size: 10px; color: var(--mute); margin-left: 6px; }
+.rg-item.on .st { color: var(--accent); }
+.rg-item.held { border-color: var(--accent); }
+.rg-item:not(.on) { opacity: .75; }
+.rg-item:not(:disabled):hover { border-color: var(--fg); opacity: 1; }
+.rg-item .mute { font-size: 12px; margin-top: 3px; }
+
+/* ─── v5: 대표색 민트 ─── */
+::selection { background: var(--accent); color: var(--bg); }
+.btn.solid { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn.solid:hover:not(:disabled) { background: transparent; color: var(--accent); border-color: var(--accent); }
+.hub .btn.solid:hover:not(:disabled) { background: transparent; }
+.launch-diamond::before { border-color: var(--accent); }
+.launch-diamond span { background: var(--accent); }
+.map svg.links path.live { stroke: var(--accent); }
+.node.reach { border-color: var(--accent); }
+.node.reach::before, .node.reach::after { border-color: var(--accent); }
+.node.reach:hover { background: var(--accent); }
+.radar i, .radar .sweep { border-color: var(--accent) !important; }
+.strata .cable { background: var(--accent); }
+.strata .probe { border-color: var(--accent); color: var(--accent); }
+.strata .probe::after { border-color: var(--accent); }
+.stratum.on { box-shadow: -6px 0 0 var(--accent); }
+.sq:hover, .sq.open { border-color: var(--accent); }
+.sq.open .sq-more { color: var(--accent); }
+.energy { border-color: var(--accent); color: var(--accent); }
+.card.sel { outline-color: var(--accent); }
+.tnode.avail .o { border-color: var(--accent); }
+.tnode.own .o { background: var(--accent); border-color: var(--accent); }
+.tree-inner > svg line.on { stroke: var(--accent); }
+.g-nav button.on { background: var(--accent); border-color: var(--accent); }
+.kicker { color: var(--accent); }
+.chip.menu-btn:hover, .deck-fan:hover span b { color: var(--accent); }
+.deck-fan i:last-of-type { background: var(--accent); border-color: var(--accent); }
+.unit.enemy.mimicsel { border-color: var(--accent) !important; }
+:root { --kw-cln: var(--accent); }
+/* v5: 커서 파동 민트, 맵 하단 덱·소장품 */
+.cursor-ping i, .cursor-burst i { border-color: var(--accent); }
+.cursor-burst i + i { border-color: var(--fg); }
+.deck-fan { left: calc(50% - 70px); width: 190px; height: 84px; }
+.deck-fan i { width: 34px; height: 48px; margin-left: -17px; bottom: 30px; }
+.deck-fan span { font-size: 15px; letter-spacing: .04em; color: var(--fg); }
+.deck-fan span b { font-size: 18px; }
+.relic-btn { position: absolute; left: calc(50% + 50px); bottom: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid transparent; transition: border-color .2s; }
+.relic-btn:hover { border-color: var(--accent); }
+.relic-btn .rb-grid { display: grid; grid-template-columns: repeat(3, 12px); gap: 2px; transition: transform .25s; }
+.relic-btn:hover .rb-grid { transform: scale(1.12) rotate(-4deg); }
+.relic-btn .rb-grid i { width: 12px; height: 12px; border: 1px solid var(--line2); }
+.relic-btn .rb-grid i.on { background: var(--accent); border-color: var(--accent); }
+.relic-btn > span:last-child { font-size: 15px; }
+.relic-btn b { font-size: 16px; }
+/* v5: 키워드 설명 팝업 */
+.kw[data-kw] { cursor: help; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.kw-tip { position: fixed; z-index: 9998; width: 240px; border: 1px solid var(--k, var(--accent)); background: var(--panel); padding: 10px 12px; font-size: 12px; line-height: 1.55; color: var(--fg); pointer-events: none; animation: screenIn .15s ease; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+.kw-tip b { display: block; color: var(--k, var(--accent)); font-size: 13px; margin-bottom: 3px; }
+.kw-tip.kw-weak, .kw-tip.kw-vuln, .kw-tip.kw-seal { --k: var(--kw-deb); }
+.kw-tip.kw-ref { --k: var(--kw-ech); }
+
+/* ─── v5: 전투 — 태양 턴 종료, 멈춤, 모사 아이콘 ─── */
+.sunend { width: 120px; height: 120px; position: relative; display: grid; place-items: center; border-radius: 50%; cursor: pointer; animation: screenIn .3s ease; }
+.sunend span { position: absolute; bottom: -26px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-family: var(--mono); font-size: 11px; letter-spacing: .2em; color: var(--accent); }
+.sunend .sun-rays { transform-origin: 60px 60px; animation: spin 10s linear infinite; }
+.sunend .sun-wave { transform-origin: 60px 60px; animation: sunwave 2s ease-out infinite; }
+.sunend .sun-wave.w2 { animation-delay: 1s; }
+.sunend:hover .sun-rays { animation-duration: 3s; }
+.sunend:hover svg { transform: scale(1.06); }
+.sunend svg { transition: transform .2s; }
+@keyframes sunwave { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2); opacity: 0; } }
+.pausebtn { position: absolute; top: 14px; right: 18px; z-index: 6; width: 38px; height: 38px; border: 1px solid var(--line2); display: flex; align-items: center; justify-content: center; gap: 5px; transition: border-color .15s; }
+.pausebtn i { width: 4px; height: 14px; background: var(--fg); }
+.pausebtn:hover { border-color: var(--accent); }
+.pausebtn:hover i { background: var(--accent); }
+.mimicico { display: grid; grid-template-columns: 64px auto; grid-template-rows: auto auto; column-gap: 10px; align-items: center; text-align: left; color: var(--fg); padding: 2px 6px 2px 0; transition: color .2s; }
+.mimicico .mimic-svg { grid-row: 1 / 3; }
+.mimicico b { font-size: 13px; align-self: end; }
+.mimicico small { font-family: var(--mono); font-size: 10px; color: var(--mute); align-self: start; }
+.mimicico .mi-ring { transform-origin: 32px 32px; animation: spin 12s linear infinite; }
+.mimicico .mi-l { animation: miL 2.4s ease-in-out infinite; }
+.mimicico .mi-r { animation: miR 2.4s ease-in-out infinite; }
+.mimicico .mi-dot { animation: ptBlink 1.4s steps(2) infinite; }
+@keyframes miL { 50% { transform: translateX(-3px); } }
+@keyframes miR { 50% { transform: translateX(3px); } }
+.mimicico:hover:not(:disabled), .mimicico.on { color: var(--accent); }
+.mimicico:hover:not(:disabled) .mi-ring, .mimicico.on .mi-ring { animation-duration: 3s; }
+.mimicico.on .mi-r path { fill: var(--accent); fill-opacity: .35; }
+.mimicico:disabled { opacity: .35; }
+.mimicico:disabled .mi-ring, .mimicico:disabled .mi-l, .mimicico:disabled .mi-r { animation: none; }

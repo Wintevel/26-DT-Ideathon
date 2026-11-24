@@ -1,3 +1,4 @@
+import { autoPlace } from '../game/relicGrid';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ENEMIES } from '../game/data';
 import { startCombat } from '../game/engine';
@@ -9,10 +10,11 @@ import {
 import type { CombatState, FxEvent, MetaSave, RunState } from '../game/types';
 import { META } from '../game/data';
 import { Combat } from './Combat';
-import { DeckModal, RelicModal, TopBar } from './common';
+import { DeckModal, TopBar } from './common';
 import { CodexView, TreeView } from './MetaScreens';
 import { GuideView } from './Guide';
-import { CursorPing, MapMenu } from './Overlays';
+import { CursorPing, KeywordTip, MapMenu } from './Overlays';
+import { RelicDrawer } from './RelicGrid';
 import { clearRun, loadRun, saveRun } from './runSave';
 import { DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
@@ -35,6 +37,7 @@ export function App() {
   const [wipe, setWipe] = useState<{ fn: () => void; key: number; origin: { x: number; y: number } } | null>(null);
   const [burst, setBurst] = useState(false);
   const wiping = useRef(false);
+  const preRun = useRef<RunState | null>(null);
   /** 화면을 바꾸는 동작은 사각 전환이 화면을 다 덮은 순간에 실행한다 */
   const T = <A extends unknown[]>(fn: (...a: A) => void) => (...a: A) => {
     if (wiping.current) return;
@@ -66,6 +69,7 @@ export function App() {
   const enterNode = (id: string) => {
     if (!run) return;
     const n = nodeById(run, id);
+    preRun.current = run;
     const r: RunState = { ...run, pos: id, visited: [...run.visited, id] };
     setRun(r);
     if (n.type === 'combat' || n.type === 'elite' || n.type === 'boss') {
@@ -134,6 +138,7 @@ export function App() {
     r.kakpul += rw.kakpul;
     if (rw.relic) {
       r.relics = [...r.relics, rw.relic];
+      r.relicGrid = autoPlace(r.relicGrid ?? {}, rw.relic);
       setMeta(rec(m, 'relics', [rw.relic]).save);
     }
     setRun(r);
@@ -201,7 +206,7 @@ export function App() {
   }, [screen, modal]);
   const saveAndExit = T(() => { if (run) saveRun(run); setMenu(false); setRun(null); setScreen('hub'); });
   const abandon = T(() => { clearRun(); setSaved(false); setMenu(false); setRun(null); setScreen('hub'); });
-  const resume = T(() => { const r = loadRun(); if (r) { setRun(r); setCodexNew(0); setScreen('map'); } });
+  const resume = T(() => { const r = loadRun(); if (r) { if (!r.relicGrid) r.relicGrid = r.relics.reduce((g, id) => autoPlace(g, id), {} as NonNullable<RunState['relicGrid']>); setRun(r); setCodexNew(0); setScreen('map'); } });
 
   return (
     <div className="app">
@@ -229,7 +234,7 @@ export function App() {
       {screen === 'depth' && <DepthSelect depth={depth} setDepth={setDepth} onBack={T(() => setScreen('hub'))} onNext={T(() => setScreen('squad'))} />}
       {screen === 'squad' && <SquadSelect depth={depth} onBack={T(() => setScreen('depth'))} onLaunch={T(launch)} />}
       {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={T(enterNode)} onDeck={() => setModal('deck')} onRelics={() => setModal('relic')} />}
-      {screen === 'combat' && combat && <Combat key={combat.key} initial={combat.s} introEvents={combat.ev} onEnd={T(combatEnd)} onTick={setLive} />}
+      {screen === 'combat' && combat && <Combat key={combat.key} initial={combat.s} introEvents={combat.ev} onEnd={T(combatEnd)} onTick={setLive} onRetreat={T(() => { if (preRun.current) setRun(preRun.current); setCombat(null); setLive(null); setScreen('map'); })} />}
       {screen === 'reward' && run && reward && <RewardView run={run} reward={reward} meta={meta.unlocked} onDone={T(rewardDone)} />}
       {screen === 'event' && run && evState && (
         <EventView
@@ -266,9 +271,10 @@ export function App() {
       {screen === 'guide' && <GuideView onBack={T(() => setScreen('hub'))} />}
       {screen === 'codex' && <CodexView meta={meta} onBack={T(() => setScreen('hub'))} />}
       {modal === 'deck' && run && <DeckModal cards={run.deck} title={`현재 덱 ${run.deck.length}장`} onClose={() => setModal(null)} />}
-      {modal === 'relic' && run && <RelicModal relics={run.relics} onClose={() => setModal(null)} />}
+      {modal === 'relic' && run && <RelicDrawer relics={run.relics} grid={run.relicGrid ?? Object.fromEntries(run.relics.map((id, i) => [id, { r: i, c: 0, rot: 0 }]))} editable={screen !== 'combat'} onChange={(g) => setRun({ ...run, relicGrid: g })} onClose={() => setModal(null)} />}
       {menu && screen === 'map' && run && <MapMenu onClose={() => setMenu(false)} onSave={saveAndExit} onAbandon={abandon} />}
       <CursorPing />
+      <KeywordTip />
       {wipe && (
         <PixelWipe
           key={wipe.key}

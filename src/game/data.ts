@@ -35,14 +35,15 @@ export const CARD_LIST = list;
 export const MIMIC_DEF: CardDef = { id: 'mimic', name: '모사', cat: '거울', cost: 0, target: 'enemy', exhaust: true, noReward: true, text: '' };
 
 // ─── 소장품 ────────────────────────────────────────────
-export interface RelicDef { id: string; name: string; text: string; pool: 'squad' | 'elite' }
+/** 소장품은 저마다 블럭 모양(shape: [행, 열] 칸 목록)을 가지며, 3x3 격자에 넣어야만 효과가 발동한다 */
+export interface RelicDef { id: string; name: string; text: string; pool: 'squad' | 'elite'; shape: [number, number][] }
 const relicList: RelicDef[] = [
-  { id: 'focuser', name: '각뿔 집속기', pool: 'squad', text: '모사할 때 침식 증가량이 +3%에서 +1%로 줄어든다' },
-  { id: 'capacitor', name: '거울 축전기', pool: 'squad', text: '분신이 각인 카드를 시전할 때 피해 +30%' },
-  { id: 'plate', name: '전술 방탄판', pool: 'squad', text: '모사당한 적의 공격 위력이 25%가 아니라 50% 감소' },
-  { id: 'lens', name: '균열 렌즈', pool: 'elite', text: '모사 카드의 피해 +3' },
-  { id: 'coil', name: '반사 코일', pool: 'elite', text: '매 턴 시작 시 차폐 2' },
-  { id: 'antenna', name: '탐색 안테나', pool: 'elite', text: '전투 첫 턴에 카드 1장 추가로 뽑음' },
+  { id: 'focuser', name: '각뿔 집속기', pool: 'squad', shape: [[0, 0], [1, 0]], text: '모사할 때 침식 증가량이 +3%에서 +1%로 줄어든다' },
+  { id: 'capacitor', name: '거울 축전기', pool: 'squad', shape: [[0, 0], [1, 0], [1, 1]], text: '분신이 각인 카드를 시전할 때 피해 +30%' },
+  { id: 'plate', name: '전술 방탄판', pool: 'squad', shape: [[0, 0], [0, 1], [1, 0], [1, 1]], text: '모사당한 적의 공격 위력이 25%가 아니라 50% 감소' },
+  { id: 'lens', name: '균열 렌즈', pool: 'elite', shape: [[0, 0]], text: '모사 카드의 피해 +3' },
+  { id: 'coil', name: '반사 코일', pool: 'elite', shape: [[0, 0], [0, 1], [0, 2]], text: '매 턴 시작 시 차폐 2' },
+  { id: 'antenna', name: '탐색 안테나', pool: 'elite', shape: [[0, 0], [0, 1], [0, 2], [1, 1]], text: '전투 첫 턴에 카드 1장 추가로 뽑음' },
 ];
 export const RELICS: Record<string, RelicDef> = Object.fromEntries(relicList.map((r) => [r.id, r]));
 export const RELIC_LIST = relicList;

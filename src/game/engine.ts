@@ -1,4 +1,5 @@
 // 전투 규칙. 화면과 분리된 순수 로직(상태를 복제해 새 상태를 반환).
+import { activeRelics } from './relicGrid';
 import { CARDS, ENEMIES, MIMIC_DEF, DEPTHS, ABSORB_OF } from './data';
 import type { CardDef, CardInst, CombatState, Ctx, EnemyInst, FxEvent, Intent, RunState, Step, ArchiveEntry } from './types';
 
@@ -294,7 +295,7 @@ export function displayIntent(s: CombatState, e: EnemyInst): Intent {
 
 // ─── 전투 시작 ─────────────────────────────────────────
 export function makeCtx(run: RunState, meta: string[]): Ctx {
-  return { relics: run.relics, meta, depth: run.depth, squad: run.squad };
+  return { relics: activeRelics(run), meta, depth: run.depth, squad: run.squad };
 }
 
 export function startCombat(run: RunState, encounter: string[], kind: CombatState['kind'], meta: string[], archive: ArchiveEntry[]): Step {

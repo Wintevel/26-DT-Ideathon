@@ -71,7 +71,8 @@ function IntentBits({ s, e, it }: { s: CombatState; e: EnemyInst; it: Intent }) 
   return <>{bits}</>;
 }
 
-export function Combat({ initial, introEvents, onEnd, onTick }: { initial: CombatState; introEvents: FxEvent[]; onEnd: (s: CombatState) => void; onTick?: (v: { hp: number; erosion: number }) => void }) {
+export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { initial: CombatState; introEvents: FxEvent[]; onEnd: (s: CombatState) => void; onTick?: (v: { hp: number; erosion: number }) => void; onRetreat: () => void }) {
+  const [paused, setPaused] = useState(false);
   const [s, setS] = useState(initial);
   const [sel, setSel] = useState<number | null>(null);
   const [mimicMode, setMimicMode] = useState(false);
@@ -82,6 +83,11 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
   const [hoverMimic, setHoverMimic] = useState(false);
   const ended = useRef(false);
   const isBoss = s.kind === 'boss';
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.modal.drawer, .modal .box')) setPaused((v) => !v); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, []);
 
   useEffect(() => {
     const t1 = setTimeout(() => {
@@ -168,6 +174,7 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
   const alive = s.enemies.filter((e) => e.hp > 0);
   const echoEnemy = s.enemies.some((e) => e.hp > 0 && e.intent.kind === 'echo');
   const selCard = s.hand.find((h) => h.uid === sel);
+  const allDone = !busy && !s.over && !anyMimic && !s.hand.some((c) => canPlay(s, c));
 
   // 침식 구간 바
   const segs = [
@@ -184,6 +191,18 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
     <div className="combat">
       <div className="field">
         <div className="turnno">T{String(s.turn).padStart(2, '0')}</div>
+        <button className="pausebtn" onClick={() => setPaused(true)} title="일시 정지 (Esc)"><i /><i /></button>
+        {paused && (
+          <div className="modal map-menu" onClick={() => setPaused(false)}>
+            <div className="mm-box" onClick={(e) => e.stopPropagation()}>
+              <div className="kicker">PAUSED</div>
+              <h2>전투 일시 정지</h2>
+              <button className="btn solid icon-btn" onClick={() => setPaused(false)}><Icon name="launch" size={16} /> 계속하기</button>
+              <button className="btn icon-btn" onClick={() => { setPaused(false); onRetreat(); }}><Icon name="back" size={16} /> 맵으로 돌아가기</button>
+              <div className="mono mute" style={{ fontSize: 11 }}>맵으로 돌아가면 이 전투는 없던 일이 되고, 전투 전 상태로 노드를 다시 고를 수 있습니다.</div>
+            </div>
+          </div>
+        )}
         {echoEnemy && (
           <div className="echoslot">잔향 슬롯<b>{s.lastPlayed ? summarize(s.lastPlayed).name : '— 비어 있음'}</b></div>
         )}
@@ -222,7 +241,14 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
         <div className="axis">
           <span className="lbl">MIRROR AXIS</span>
           <div data-fx="emblem" style={{ position: 'relative', zIndex: 1, background: 'var(--bg)', borderRadius: '50%' }}>
-            <Emblem size={120} erosion={s.erosion} />
+            {allDone ? (
+              <button className="sunend" onClick={doEnd} title="턴 종료">
+                <SunIcon />
+                <span>턴 종료</span>
+              </button>
+            ) : (
+              <Emblem size={120} erosion={s.erosion} />
+            )}
           </div>
         </div>
 
@@ -311,13 +337,15 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
         </div>
         <div className="actions">
           <button
-            className={`mimicbtn ${mimicMode ? 'on' : ''}`}
+            className={`mimicico ${mimicMode ? 'on' : ''}`}
             disabled={busy || !anyMimic}
             onClick={() => { setSel(null); setMimicMode(!mimicMode); }}
             onMouseEnter={() => setHoverMimic(true)}
             onMouseLeave={() => setHoverMimic(false)}
+            title="모사"
           >
-            ◐ 모사 · 연산 {mimicCost(s)}
+            <MimicIcon />
+            <b>모사 · 연산 {mimicCost(s)}</b>
             <small>{s.mimicUsed ? '이번 턴 사용함' : `턴당 1회 · 침식 +${mimicPreview(s)}%`}</small>
           </button>
           <div className="pile" style={{ width: '100%', height: 34, fontSize: 12 }}>버림 {s.discard.length} · 소멸 {s.exhaust.length}</div>
@@ -338,5 +366,36 @@ export function Combat({ initial, introEvents, onEnd, onTick }: { initial: Comba
         </div>
       </div>
     </div>
+  );
+}
+
+/** 할 수 있는 행동을 다 했을 때 가운데에 뜨는 턴 종료 태양 */
+function SunIcon() {
+  return (
+    <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden>
+      <circle className="sun-wave" cx="60" cy="60" r="30" fill="none" stroke="var(--accent)" />
+      <circle className="sun-wave w2" cx="60" cy="60" r="30" fill="none" stroke="var(--accent)" />
+      <g className="sun-rays">
+        {Array.from({ length: 16 }, (_, i) => (
+          <path key={i} transform={`rotate(${i * 22.5} 60 60)`} d={i % 2 ? 'M60 14 V24' : 'M60 6 V24'} stroke="var(--accent)" strokeWidth={i % 2 ? 1.5 : 2.5} strokeLinecap="round" />
+        ))}
+      </g>
+      <circle cx="60" cy="60" r="22" fill="var(--accent)" />
+      <path d="M52 50 L68 60 L52 70 Z" fill="var(--bg)" />
+    </svg>
+  );
+}
+
+/** 모사 버튼: 마주 보는 두 반쪽이 맞물리고 바깥 고리가 도는 아이콘 */
+function MimicIcon() {
+  return (
+    <svg className="mimic-svg" width="64" height="64" viewBox="0 0 64 64" aria-hidden>
+      <circle className="mi-ring" cx="32" cy="32" r="29" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 4" />
+      <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" strokeWidth="1" opacity=".4" />
+      <g className="mi-l"><path d="M31 14 C21 16 16 24 16 32 C16 40 21 48 31 50 Z" fill="currentColor" /></g>
+      <g className="mi-r"><path d="M33 14 C43 16 48 24 48 32 C48 40 43 48 33 50 Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray="3 2" /></g>
+      <path d="M32 8 V56" stroke="var(--accent)" strokeWidth="1" />
+      <circle className="mi-dot" cx="32" cy="32" r="2.5" fill="var(--accent)" />
+    </svg>
   );
 }

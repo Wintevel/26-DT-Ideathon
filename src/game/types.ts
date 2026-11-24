@@ -154,6 +154,8 @@ export interface RunState {
   maxHp: number;
   deck: CardInst[];
   relics: string[];
+  /** 3x3 격자에 놓인 소장품: id → 왼쪽 위 칸과 회전(0~3) */
+  relicGrid?: Record<string, { r: number; c: number; rot: number }>;
   kakpul: number;
   erosion: number;
   mirrorCharges: number;

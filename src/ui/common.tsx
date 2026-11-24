@@ -27,7 +27,6 @@ export function CardView({ card, id, cost, disabled, selected, onClick, onHover,
       onMouseEnter={() => onHover?.(true)}
       onMouseLeave={() => onHover?.(false)}
       data-fx={dataFx}
-      title={d.text}
     >
       {!d.unplayable && <span className="cost">{cost ?? d.cost}</span>}
       {eroPreview ? <span className="ero">{eroPreview > 0 ? `+${eroPreview}%` : `${eroPreview}%`}</span> : null}

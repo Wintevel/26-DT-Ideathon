@@ -20,6 +20,7 @@ export function newRun(squadId: string, depth: number, meta: string[]): RunState
     maxHp,
     deck,
     relics: [sq.relic],
+    relicGrid: { [sq.relic]: { r: 0, c: 0, rot: 0 } },
     kakpul: sq.kakpul + (meta.includes('awaken') ? 15 : 0),
     erosion: sq.erosion,
     mirrorCharges: 4 + (meta.includes('infinite') ? 1 : 0),
