@@ -1,4 +1,4 @@
-import { CARDS, ENEMIES, RELICS, SQUADS } from '../game/data';
+import { CARDS, depthLabel, ENEMIES, RELICS, SQUADS } from '../game/data';
 import { defOf, tierOf, TIER_NAMES } from '../game/engine';
 import type { CardInst, RunState } from '../game/types';
 import { nodeById, STAGES } from '../game/run';
@@ -47,7 +47,7 @@ export function TopBar({ run, meta, onDeck, onRelics, onMenu, onMap }: { run: Ru
     <div className="topbar">
       <div className="where">
         SECTOR 01 / 침묵 회랑
-        <small>{stage === STAGES - 1 ? 'BOSS' : `STAGE ${String(stage + 1).padStart(2, '0')}`} · DEPTH {String(run.depth).padStart(2, '0')}</small>
+        <small>{stage === STAGES - 1 ? 'BOSS' : `STAGE ${String(stage + 1).padStart(2, '0')}`} · DEPTH {depthLabel(run.depth)}</small>
       </div>
       <div className="stat"><Icon name="heart" size={15} /> HP <span className="bar"><i style={{ width: `${(run.hp / run.maxHp) * 100}%` }} /></span><b>{run.hp}/{run.maxHp}</b></div>
       <div className="stat" data-fx="erosion-top"><Icon name="erosion" size={15} /> 침식 <span className={`bar ero ${t >= 2 ? 'hot' : ''}`}><i style={{ width: `${run.erosion}%` }} /></span><b>{run.erosion}%</b> <span className="mute">{TIER_NAMES[t]}</span></div>

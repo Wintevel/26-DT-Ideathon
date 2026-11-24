@@ -1,6 +1,6 @@
 // 전투 규칙. 화면과 분리된 순수 로직(상태를 복제해 새 상태를 반환).
 import { activeRelics } from './relicGrid';
-import { CARDS, ENEMIES, MIMIC_DEF, DEPTHS, ABSORB_OF } from './data';
+import { CARDS, ENEMIES, MIMIC_DEF, depthDef, ABSORB_OF } from './data';
 import type { CardDef, CardInst, CombatState, Ctx, EnemyInst, FxEvent, Intent, RunState, Step, ArchiveEntry } from './types';
 
 const clone = <T,>(x: T): T => structuredClone(x);
@@ -30,7 +30,10 @@ export function tierBounds(meta: string[]) {
 const TIER_BONUS = [0, 0.15, 0.3, 0.5];
 
 export function erosionGain(amt: number, depth: number) {
-  return amt > 0 && depth >= 3 ? Math.ceil(amt * 1.5) : amt;
+  if (amt <= 0) return amt;
+  if (depth >= 3) return Math.ceil(amt * 1.5);
+  if (depth < 0) return Math.max(1, Math.round(amt / 2));
+  return amt;
 }
 
 function addErosion(s: CombatState, amt: number, ev: FxEvent[]) {
@@ -187,10 +190,10 @@ function applyCard(s: CombatState, card: CardInst, targetUid: number | null, ev:
     const lens = s.ctx.relics.includes('lens') ? 3 : 0;
     if (it.dmg) strike(it.dmg + lens, it.hits ?? 1);
     if (it.block) gainBlock(s, it.block, ev);
-    if (it.str) s.player.str += it.str;
+    if (it.str) { s.player.str += it.str; ev.push({ k: 'status', to: 'player', good: true, msg: `강화 +${it.str}` }); }
     const t = tgt();
-    if (t && it.weak) t.weak += it.weak;
-    if (t && it.vuln) t.vuln += it.vuln;
+    if (t && it.weak) { t.weak += it.weak; ev.push({ k: 'status', to: `e${t.uid}`, good: false, msg: `약화 ${it.weak}` }); }
+    if (t && it.vuln) { t.vuln += it.vuln; ev.push({ k: 'status', to: `e${t.uid}`, good: false, msg: `취약 ${it.vuln}` }); }
     if (it.kind === 'summon') summonClone(s, ev);
     if (!it.dmg && !it.block && !it.str && !it.weak && !it.vuln && it.kind !== 'summon') gainBlock(s, 5, ev);
     return;
@@ -199,8 +202,8 @@ function applyCard(s: CombatState, card: CardInst, targetUid: number | null, ev:
   switch (card.id) {
     case 'observe': drawN(s, 1); gainBlock(s, 2, ev); return;
     case 'focus': s.player.energy += 1; return;
-    case 'pierce': { strike(10); const t = tgt(); if (t) t.vuln += 2; return; }
-    case 'feint': { const t = tgt(); if (t) t.weak += 2; drawN(s, 1); return; }
+    case 'pierce': { strike(10); const t = tgt(); if (t) { t.vuln += 2; ev.push({ k: 'status', to: `e${t.uid}`, good: false, msg: '취약 2' }); } return; }
+    case 'feint': { const t = tgt(); if (t) { t.weak += 2; ev.push({ k: 'status', to: `e${t.uid}`, good: false, msg: '약화 2' }); } drawN(s, 1); return; }
     case 'mimicSlash': {
       const t = tgt();
       const it = t?.intent;
@@ -217,8 +220,8 @@ function applyCard(s: CombatState, card: CardInst, targetUid: number | null, ev:
     case 'crack': strike(4 + 2 * Math.floor(s.erosion / 10)); return;
     case 'invert': gainBlock(s, 5 + Math.floor(s.erosion / 10), ev); return;
     case 'wildStrike': strike(rint(3, 12)); return;
-    case 'silence': { strike(4); const t = tgt(); if (t) { t.weak += 2; t.vuln += 1; } return; }
-    case 'devour': s.player.str += 2; ev.push({ k: 'text', to: 'player', msg: '강화 +2' }); return;
+    case 'silence': { strike(4); const t = tgt(); if (t) { t.weak += 2; t.vuln += 1; ev.push({ k: 'status', to: `e${t.uid}`, good: false, msg: '약화 2 · 취약 1' }); } return; }
+    case 'devour': s.player.str += 2; ev.push({ k: 'status', to: 'player', good: true, msg: '강화 +2' }); return;
     case 'phantomEcho': {
       const prev = s.lastPlayed;
       if (prev && prev.id !== 'phantomEcho' && depthGuard < 1) applyCard(s, prev, targetUid, ev, isClone, depthGuard + 1);
@@ -245,7 +248,7 @@ function summonClone(s: CombatState, ev: FxEvent[]) {
 
 // ─── 적 의도 ───────────────────────────────────────────
 function dmgMult(depth: number) {
-  return 1 + (DEPTHS[depth].mult - 1) * 0.6;
+  return 1 + (depthDef(depth).mult - 1) * 0.6;
 }
 function scaleIntent(it: Intent, depth: number): Intent {
   const m = dmgMult(depth);
@@ -305,7 +308,7 @@ export function startCombat(run: RunState, encounter: string[], kind: CombatStat
   const t = tierOf(run.erosion, meta);
   const blanks = t >= 2 ? 2 : t >= 1 ? 1 : 0;
   for (let i = 0; i < blanks; i++) deck.push({ uid: ++uid, id: 'blank', temp: true });
-  const hpMult = DEPTHS[run.depth].mult;
+  const hpMult = depthDef(run.depth).mult;
 
   let scanned: string[] = [];
   let archLabel: string | undefined;
@@ -550,9 +553,9 @@ function enemyAct(s: CombatState, e: EnemyInst, ev: FxEvent[]) {
     case 'buff':
       doHits(it.dmg, it.hits ?? 1);
       eBlock(it.block);
-      if (it.str) { e.str += it.str; ev.push({ k: 'text', to: `e${e.uid}`, msg: `강화 +${it.str}` }); }
-      if (it.weak) s.player.weak += it.weak;
-      if (it.vuln) s.player.vuln += it.vuln;
+      if (it.str) { e.str += it.str; ev.push({ k: 'status', to: `e${e.uid}`, good: true, msg: `강화 +${it.str}` }); }
+      if (it.weak) { s.player.weak += it.weak; ev.push({ k: 'status', to: 'player', good: false, msg: `약화 ${it.weak}` }); }
+      if (it.vuln) { s.player.vuln += it.vuln; ev.push({ k: 'status', to: 'player', good: false, msg: `취약 ${it.vuln}` }); }
       return;
     case 'defend':
       eBlock(it.block);
@@ -564,12 +567,12 @@ function enemyAct(s: CombatState, e: EnemyInst, ev: FxEvent[]) {
       ev.push({ k: 'echo', from: `e${e.uid}`, cardId: c.id });
       doHits(sum.dmg, sum.hits * (s.ctx.depth >= 2 ? 2 : 1));
       eBlock(sum.block);
-      if (!sum.dmg && !sum.block) { e.str += 1; ev.push({ k: 'text', to: `e${e.uid}`, msg: '강화 +1' }); }
+      if (!sum.dmg && !sum.block) { e.str += 1; ev.push({ k: 'status', to: `e${e.uid}`, good: true, msg: '강화 +1' }); }
       return;
     }
     case 'summon': {
       const d = ENEMIES.shard;
-      const hp = Math.round(d.hp[0] * DEPTHS[s.ctx.depth].mult);
+      const hp = Math.round(d.hp[0] * depthDef(s.ctx.depth).mult);
       const m: EnemyInst = { uid: newUid(s), defId: 'shard', name: d.name, hp, maxHp: hp, block: 0, str: 0, weak: 0, vuln: 0, intent: { kind: 'attack', label: '' }, mimicked: false, turn: 0 };
       s.enemies.push(m);
       ev.push({ k: 'summon', uid: m.uid });

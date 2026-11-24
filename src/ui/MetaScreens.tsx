@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CARD_LIST, ENEMY_LIST, EVENTS, META, META_TREE, RELIC_LIST, ABSORB_OF } from '../game/data';
+import { CARD_LIST, ENEMY_LIST, EVENTS, META, META_TREE, RELIC_LIST, ABSORB_OF, depthLabel } from '../game/data';
 import { canUnlock, reqMet } from '../game/meta';
 import type { MetaSave } from '../game/types';
 import { CardView, squadName } from './common';
@@ -136,7 +136,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
             ))}
             {tab === 'archive' && (meta.archive.length ? meta.archive.map((a, i) => (
               <div key={i} className="entry">
-                <div className="tagrow">원형 #{String(i + 1).padStart(2, '0')} · {a.at} · DEPTH {a.depth}</div>
+                <div className="tagrow">원형 #{String(i + 1).padStart(2, '0')} · {a.at} · DEPTH {depthLabel(a.depth)}</div>
                 <h4>{squadName(a.squad)}의 원형</h4>
                 <p>주력 카드: {a.cards.map((id) => CARD_LIST.find((x) => x.id === id)?.name).join(' / ')}</p>
                 <p>다음 작전에서 아크가 이 덱을 재현할 수 있습니다.</p>

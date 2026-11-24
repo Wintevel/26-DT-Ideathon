@@ -1,5 +1,5 @@
 // 런(한 판) 진행: 맵 생성, 보상, 이벤트, 상점, 정산
-import { BASE_DECK, CARD_LIST, CARDS, DEPTHS, ENCOUNTERS, ENCOUNTERS_EARLY, EVENTS, RELIC_LIST, SQUADS, ABSORB_OF, ENEMIES } from './data';
+import { BASE_DECK, CARD_LIST, CARDS, depthDef, ENCOUNTERS, ENCOUNTERS_EARLY, EVENTS, RELIC_LIST, SQUADS, ABSORB_OF, ENEMIES } from './data';
 import { shuffle, erosionGain } from './engine';
 import type { CardInst, CombatState, MapNode, MetaSave, NodeType, RunState } from './types';
 
@@ -101,6 +101,7 @@ export interface Reward {
   cards: string[];
   absorbOptions: string[];
   relic: string | null;
+  boss?: boolean;
 }
 
 export function applyCombatResult(run: RunState, cs: CombatState): RunState {
@@ -200,7 +201,7 @@ export function settle(run: RunState, outcome: 'lose' | 'eroded' | 'win', meta: 
     ['처음 모사한 적', s.newMimics.length * 2],
   ];
   let base = lines.reduce((a, l) => a + l[1], 0);
-  const mult = DEPTHS[run.depth].frag;
+  const mult = depthDef(run.depth).frag;
   let total = base * mult;
   if (meta.unlocked.includes('recall')) total *= 1.15;
   if (outcome === 'eroded') total *= 1.3;

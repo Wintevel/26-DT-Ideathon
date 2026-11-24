@@ -9,17 +9,18 @@ import { CardView } from './common';
 import { Icon } from './Icons';
 import { Portrait } from './Portraits';
 import { Emblem } from './Emblem';
-import { fly, floatText, pulse, shake, sleep } from './fx';
+import { fly, floatText, guard, pulse, shake, slash, sleep, statusFx } from './fx';
 
 function playFx(events: FxEvent[], s: CombatState) {
   let blockStack = 0;
   for (const e of events) {
     switch (e.k) {
       case 'dmg':
-        if (e.amt > 0) { floatText(e.to, `-${e.amt}`, e.to === 'player' ? 'red' : ''); shake(e.to, e.amt >= 10); }
+        if (e.amt > 0) { slash(e.to, e.amt >= 10, e.to === 'player'); floatText(e.to, `-${e.amt}`, e.to === 'player' ? 'red' : ''); shake(e.to, e.amt >= 10); }
         else if (e.blocked > 0) floatText(e.to, '차폐', 'small');
         break;
       case 'block':
+        if (!blockStack) guard(e.to);
         floatText(e.to, `+${e.amt} 차폐`, 'small', -20 - blockStack * 18);
         blockStack++;
         break;
@@ -47,6 +48,10 @@ function playFx(events: FxEvent[], s: CombatState) {
         break;
       case 'text':
         floatText(e.to, e.msg, 'small', -30);
+        break;
+      case 'status':
+        statusFx(e.to, e.good);
+        floatText(e.to, e.msg, `small ${e.good ? 'up' : 'down'}`, -30);
         break;
       case 'summon':
         floatText(`e${e.uid}`, '분열', 'small');

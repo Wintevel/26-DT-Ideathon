@@ -117,6 +117,7 @@ export type FxEvent =
   | { k: 'seal'; cardId: string }
   | { k: 'summon'; uid: number }
   | { k: 'text'; to: string; msg: string }
+  | { k: 'status'; to: string; good: boolean; msg: string }
   | { k: 'die'; to: string };
 
 export interface Step {

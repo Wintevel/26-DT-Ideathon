@@ -132,7 +132,10 @@ export function App() {
     if (cs.kind === 'boss') {
       r.stats.bossKilled = true;
       r.stats.nodesCleared += 1;
-      return finish(r, 'win');
+      setRun(r);
+      setReward({ ...makeReward(r, cs), kakpul: 0, absorbOptions: [], relic: null, boss: true });
+      setScreen('reward');
+      return;
     }
     const rw = makeReward(r, cs);
     r.kakpul += rw.kakpul;
@@ -154,6 +157,7 @@ export function App() {
     if (abs) { r = absorb(r, abs); ids.push(abs); }
     if (ids.length) setMeta(rec(meta, 'cards', ids).save);
     if (r.erosion >= 100) return finish(r, 'eroded');
+    if (reward?.boss) return finish(r, 'win');
     clearNode(r);
   };
 

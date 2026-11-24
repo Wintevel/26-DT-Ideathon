@@ -132,13 +132,19 @@ export const SQUADS: SquadDef[] = [
 export const BASE_DECK = ['cut', 'cut', 'cut', 'cut', 'guard', 'guard', 'guard', 'guard', 'observe'];
 
 // ─── 심도 ──────────────────────────────────────────────
-export const DEPTHS = [
+export interface DepthDef { lv: number; name: string; mult: number; frag: number; rule: string; tag?: string }
+export const DEPTHS: DepthDef[] = [
+  { lv: -1, name: '훈련 관측', mult: 0.75, frag: 0.5, tag: '초보 전용', rule: '처음 접속하는 요원을 위한 얕은 층. 적 체력과 공격력이 낮고, 모든 침식 증가량이 절반입니다.' },
   { lv: 0, name: '표준 관측', mult: 1, frag: 1, rule: '기본 규칙. 거울 프로토콜의 모사와 침식을 익힙니다.' },
   { lv: 1, name: '왜곡 반사', mult: 1.2, frag: 1.25, rule: '일반 적도 3턴마다 당신의 마지막 카드를 반향합니다.' },
   { lv: 2, name: '거울 역행', mult: 1.38, frag: 1.5, rule: '반향이 카드를 두 번 따라 씁니다.' },
   { lv: 3, name: '자아 침식', mult: 1.58, frag: 1.75, rule: '모든 침식 증가량 ×1.5.' },
   { lv: 4, name: '원형 붕괴', mult: 1.8, frag: 2, rule: '아크가 카드 5장을 스캔하고 처음부터 역상 상태입니다.' },
 ];
+export const MIN_DEPTH = DEPTHS[0].lv;
+export const MAX_DEPTH = DEPTHS[DEPTHS.length - 1].lv;
+export const depthDef = (lv: number) => DEPTHS.find((d) => d.lv === lv) ?? DEPTHS[1];
+export const depthLabel = (lv: number) => `${lv < 0 ? '+' : '−'}${String(Math.abs(lv)).padStart(2, '0')}`;
 
 // ─── 우위 트리 ─────────────────────────────────────────
 export interface MetaNode { id: string; name: string; cost: number; req: string[]; x: number; y: number; core?: boolean; text: string }

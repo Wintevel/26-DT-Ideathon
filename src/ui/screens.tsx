@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CARDS, DEPTHS, ENEMIES, EVENT_MAP, RELICS, SQUADS } from '../game/data';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { CARDS, DEPTHS, depthDef, depthLabel, ENEMIES, EVENT_MAP, MAX_DEPTH, MIN_DEPTH, RELICS, SQUADS, type DepthDef } from '../game/data';
 import { erosionGain, tierOf, TIER_NAMES } from '../game/engine';
 import { currentStage, nodeById, priceOf, reachable, STAGES, type Reward, type Settlement } from '../game/run';
 import type { CardInst, MapNode, MetaSave, RunState } from '../game/types';
@@ -61,64 +61,97 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset, onResume
 }
 
 // ─── 출격 준비 1: 프로토콜 심도 ────────────────────────
+const DEPTH_ICO = (lv: number) => (lv < 0 ? 'd0' : DEPTH_ICON[lv]);
 export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number; setDepth: (d: number) => void; onBack: () => void; onNext: () => void }) {
-  const d = DEPTHS[depth];
+  const d = depthDef(depth);
   const box = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState(false);
+  const [probeY, setProbeY] = useState(0);
+  const clamp = (v: number) => Math.max(MIN_DEPTH, Math.min(MAX_DEPTH, v));
   const pick = (clientY: number) => {
     const el = box.current;
     if (!el) return;
-    const layers = el.querySelectorAll<HTMLElement>('.stratum');
-    let best = 0;
-    layers.forEach((l, i) => { if (clientY >= l.getBoundingClientRect().top - 4) best = i; });
+    let best = MIN_DEPTH;
+    el.querySelectorAll<HTMLElement>('.slab').forEach((l) => { if (clientY >= l.getBoundingClientRect().top - 10) best = Number(l.dataset.lv); });
     if (best !== depth) setDepth(best);
   };
+  // 탐침 위치: 선택된 층의 가운데
+  useLayoutEffect(() => {
+    const el = box.current?.querySelector<HTMLElement>(`.slab[data-lv="${depth}"]`);
+    if (el) setProbeY(el.offsetTop + el.offsetHeight / 2);
+  }, [depth]);
+  // 휠: 한 칸씩 (트랙패드는 누적)
+  const depthRef = useRef(depth);
+  depthRef.current = depth;
+  useEffect(() => {
+    const el = box.current?.parentElement;
+    if (!el) return;
+    let acc = 0, last = 0;
+    const w = (e: WheelEvent) => {
+      e.preventDefault();
+      acc += e.deltaY;
+      const now = performance.now();
+      if (Math.abs(acc) < 40 || now - last < 110) return;
+      last = now;
+      const next = clamp(depthRef.current + (acc > 0 ? 1 : -1));
+      acc = 0;
+      if (next !== depthRef.current) setDepth(next);
+    };
+    el.addEventListener('wheel', w, { passive: false });
+    return () => el.removeEventListener('wheel', w);
+  }, [setDepth]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setDepth(Math.min(DEPTHS.length - 1, depth + 1)); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); setDepth(Math.max(0, depth - 1)); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setDepth(clamp(depth + 1)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setDepth(clamp(depth - 1)); }
       else if (e.key === 'Enter') onNext();
     };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [depth, setDepth, onNext]);
+  const slab = (x: DepthDef, i: number) => (
+    <button
+      key={x.lv}
+      data-lv={x.lv}
+      className={`slab ${x.lv < 0 ? 'easy' : ''} ${x.lv === MAX_DEPTH ? 'last' : ''} ${depth === x.lv ? 'on' : ''} ${x.lv <= depth ? 'fill' : ''}`}
+      style={{ ['--i' as string]: i, zIndex: 20 - i }}
+    >
+      <span className="t">
+        <span className="dl">DEPTH <em>{depthLabel(x.lv)}</em>{x.tag && <small>{x.tag}</small>}</span>
+        <span className="meta">적 체력 {Math.round(x.mult * 100)}% · 파편 ×{x.frag}</span>
+      </span>
+      <span className="ic"><Icon name={DEPTH_ICO(x.lv)} size={24} stroke={1.4} /></span>
+    </button>
+  );
   return (
     <div className="screen">
       <div className="head">
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 허브로</button>
         <div><div className="kicker">PRE-LAUNCH · STEP 1 / 2</div><h2>프로토콜 심도 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>탐침을 아래로 끌어 내려 심도를 고르세요 · ↑↓ 키</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>끌어 내리거나 휠을 굴려 심도를 고르세요 · ↑↓ 키</span>
       </div>
       <div className="wrap strata-wrap">
         <div
           ref={box}
-          className={`strata ${drag ? 'dragging' : ''}`}
-          style={{ ['--d' as string]: depth }}
-          onPointerDown={(e) => { (e.target as HTMLElement).closest('.strata')?.setPointerCapture(e.pointerId); setDrag(true); pick(e.clientY); }}
+          className={`slabs ${drag ? 'dragging' : ''}`}
+          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag(true); pick(e.clientY); }}
           onPointerMove={(e) => drag && pick(e.clientY)}
           onPointerUp={() => setDrag(false)}
           onPointerCancel={() => setDrag(false)}
         >
+          <div className="shaft"><span className="cable" style={{ height: probeY }} /><span className="probe" style={{ top: probeY }}><Icon name="antenna" size={16} /></span><span className="readout" style={{ top: probeY }}>{depthLabel(depth)}</span></div>
+          {DEPTHS.filter((x) => x.lv < 0).map((x, i) => slab(x, i))}
           <div className="surface"><span>SURFACE</span><i /></div>
-          <div className="shaft"><span className="cable" /><span className="probe"><Icon name="antenna" size={16} /></span></div>
-          {DEPTHS.map((x) => (
-            <button key={x.lv} className={`stratum s${x.lv} ${depth === x.lv ? 'on' : ''} ${x.lv <= depth ? 'fill' : ''}`} style={{ ['--i' as string]: x.lv }}>
-              <span className="lv">−{String(x.lv).padStart(2, '0')}</span>
-              <span className="ic"><Icon name={DEPTH_ICON[x.lv]} size={26} stroke={1.4} /></span>
-              <b>{x.name}</b>
-              <span className="meta"><span>적 체력 {Math.round(x.mult * 100)}%</span><span>파편 ×{x.frag}</span></span>
-            </button>
-          ))}
+          {DEPTHS.filter((x) => x.lv >= 0).map((x) => slab(x, x.lv + 1))}
           <div className="bedrock">CORE · 아크</div>
         </div>
         <aside className="strata-detail" key={depth}>
-          <div className="mono mute" style={{ fontSize: 11, letterSpacing: '.14em' }}>DEPTH −{String(depth).padStart(2, '0')}</div>
-          <div className="big-ic"><Icon name={DEPTH_ICON[depth]} size={64} stroke={1.2} /></div>
+          <div className="mono mute" style={{ fontSize: 11, letterSpacing: '.14em' }}>DEPTH {depthLabel(depth)}{d.tag ? ` · ${d.tag}` : ''}</div>
+          <div className="big-ic"><Icon name={DEPTH_ICO(depth)} size={64} stroke={1.2} /></div>
           <b>{d.name}</b>
           <p className="mute">{d.rule}</p>
-          <div className="stat-row"><span><Icon name="heart" size={14} /> 적 체력 {Math.round(d.mult * 100)}%</span><span><Icon name="fragment" size={14} /> 파편 ×{d.frag}</span></div>
-          <div className="gauge">{DEPTHS.map((_, i) => <i key={i} className={i <= depth ? 'on' : ''} />)}</div>
+          <div className="gauge">{DEPTHS.map((x) => <i key={x.lv} className={x.lv <= depth ? 'on' : ''} />)}</div>
           <button className="btn solid icon-btn" onClick={onNext}>이 심도로 하강 <Icon name="descend" size={16} /></button>
         </aside>
       </div>
@@ -133,7 +166,7 @@ export function SquadSelect({ depth, onBack, onLaunch }: { depth: number; onBack
     <div className="screen">
       <div className="head">
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 심도 선택</button>
-        <div><div className="kicker">PRE-LAUNCH · STEP 2 / 2 · DEPTH {String(depth).padStart(2, '0')} {DEPTHS[depth].name}</div><h2>전술 분대 선택</h2></div>
+        <div><div className="kicker">PRE-LAUNCH · STEP 2 / 2 · DEPTH {depthLabel(depth)} {depthDef(depth).name}</div><h2>전술 분대 선택</h2></div>
         <span className="spacer" />
         <span className="mono mute" style={{ fontSize: 12 }}>분대를 누르면 상세 정보가 펼쳐집니다</span>
       </div>
@@ -222,7 +255,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
       <div className="map-wrap">
         <div className="map-head">
           <div>
-            <div className="k">SECTOR 01 · 제1구역 · DEPTH {String(run.depth).padStart(2, '0')} {DEPTHS[run.depth].name}</div>
+            <div className="k">SECTOR 01 · 제1구역 · DEPTH {depthLabel(run.depth)} {depthDef(run.depth).name}</div>
             <h2>침묵 회랑 — 다음 통로 선택</h2>
           </div>
           {run.revealAll && <div className="k">안테나 신호: 전 구역 개방</div>}
@@ -315,13 +348,14 @@ export function RewardView({ run, reward, meta, onDone }: { run: RunState; rewar
   return (
     <div className="screen" style={{ minHeight: 'auto', flex: 1 }}>
       <div className="center-wrap">
-        <div className="big-title">CLEAR</div>
-        <div className="mono mute">작전 완료 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</div>
+        <div className="big-title clear-rise">CLEAR</div>
+        <div className="rw-body">
+        <div className="mono mute">{reward.boss ? '보스 격파 · 마지막 카드 1장을 고르면 작전 결과로 넘어갑니다' : <>구역 확보 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</>}</div>
 
         {reward.absorbOptions.length > 0 && (
           <div className="panel" style={{ marginTop: 18 }}>
             <div className="k">ABSORB · 남은 거울 모사 {run.mirrorCharges}회</div>
-            <h3>흡수 — 이번 전투에서 모사한 기술을 영구히 내 것으로</h3>
+            <h3>흡수</h3>
             <div className="mute" style={{ fontSize: 12 }}>흡수하면 침식 {run.erosion}% → {after}% ({TIER_NAMES[tierOf(after, meta)]}). 흡수 카드는 아크가 당신을 스캔할 때도 쓰입니다.</div>
             <div className="choices">
               {reward.absorbOptions.map((id) => (
@@ -354,7 +388,8 @@ export function RewardView({ run, reward, meta, onDone }: { run: RunState; rewar
         )}
 
         <div style={{ marginTop: 20 }}>
-          <button className="btn solid" onClick={() => onDone(card, abs)}>{card || abs ? '확정하고 진행 →' : '건너뛰고 진행 →'}</button>
+          <button className="btn solid" onClick={() => onDone(card, abs)}>{reward.boss ? (card ? '확정하고 작전 완료 →' : '건너뛰고 작전 완료 →') : card || abs ? '확정하고 진행 →' : '건너뛰고 진행 →'}</button>
+        </div>
         </div>
       </div>
     </div>
