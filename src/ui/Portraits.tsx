@@ -1,167 +1,258 @@
-// 캐릭터·적 프로필. 흑백 기반에 위험 신호만 붉은 점으로. 보스 아크는 "내 분대의 거울상".
+// 캐릭터·적 프로필: 좌우 대칭 문장(紋章)형 선화. 흑백 + 빗금, 위험 신호만 붉게.
+// 보스 아크는 "내 분대의 거울상"(좌우 반전 + 색 반전).
+import { useId, type ReactNode } from 'react';
+
 const FG = 'var(--fg)';
 const BG = 'var(--bg)';
 const G1 = '#8b8b86';
 const G2 = '#3d3d3a';
 const RED = 'var(--danger)';
 
-function Scout() {
+type P = { h: string; d: string };
+
+/** 왼쪽 반을 그리면 오른쪽에 거울로 복제한다 */
+const Sym = ({ children }: { children: ReactNode }) => (
+  <>
+    <g>{children}</g>
+    <g transform="translate(120 0) scale(-1 1)">{children}</g>
+  </>
+);
+
+function Frame() {
   return (
     <g>
-      <path d="M18 120 C20 92 38 82 60 82 C82 82 100 92 102 120 Z" fill={FG} />
-      <path d="M42 90 L60 104 L78 90" stroke={BG} strokeWidth="3" fill="none" />
-      <rect x="52" y="70" width="16" height="14" fill={G1} />
-      <circle cx="60" cy="50" r="23" fill={FG} />
-      <rect x="37" y="42" width="46" height="13" fill={BG} />
-      <rect className="pt-scan" x="40" y="45" width="10" height="7" fill={FG} />
-      <path d="M78 32 L94 10" stroke={FG} strokeWidth="3" />
-      <path d="M86 6 A10 10 0 0 1 102 14" stroke={G1} strokeWidth="2" fill="none" />
-      <circle className="pt-blink" cx="94" cy="10" r="4" fill={RED} />
+      <circle cx="60" cy="58" r="50" fill="none" stroke={G2} strokeDasharray="1.5 3" />
+      <path d="M3 13 V3 H13 M107 3 H117 V13 M117 107 V117 H107 M13 117 H3 V107" fill="none" stroke={G1} strokeWidth="1" />
+      <path d="M60 1 V6 M1 58 H6 M114 58 H119" stroke={G1} strokeWidth="1" />
     </g>
   );
 }
 
-function Resonance() {
+function Label({ code }: { code: string }) {
+  if (!code) return null;
+  const w = code.length * 3.9 + 5;
   return (
     <g>
-      <g className="pt-drift" opacity=".75">
-        <path d="M30 120 C32 92 50 82 72 82 C94 82 110 92 112 120" fill="none" stroke={FG} strokeWidth="2" strokeDasharray="4 3" />
-        <circle cx="72" cy="50" r="22" fill="none" stroke={FG} strokeWidth="2" strokeDasharray="4 3" />
+      <rect x="4" y="107.5" width={w} height="9" fill={BG} stroke={G2} strokeWidth=".6" />
+      <text x="6.5" y="114" fontFamily="IBM Plex Mono, monospace" fontSize="6" letterSpacing=".4" fill={G1}>{code}</text>
+    </g>
+  );
+}
+
+// ─── 분대 ────────────────────────────────────────────
+function Scout({ h }: P) {
+  return (
+    <g>
+      <path d="M12 120 C16 100 32 92 48 90 L60 98 L72 90 C88 92 104 100 108 120 Z" fill={h} stroke={FG} strokeWidth="1.2" />
+      <path d="M46 90 L60 106 L74 90" fill="none" stroke={FG} strokeWidth="1.6" />
+      <rect x="52" y="78" width="16" height="13" fill={BG} stroke={FG} strokeWidth="1.2" />
+      <Sym>
+        <path d="M74 26 L90 6" stroke={FG} strokeWidth="1.6" />
+        <path d="M80 18 L86 20" stroke={FG} strokeWidth="1.2" />
+        <rect x="86" y="44" width="5" height="14" fill={FG} />
+        <path d="M80 58 L87 56 L85 72 L74 79 Z" fill={h} stroke={FG} strokeWidth="1" />
+      </Sym>
+      <circle cx="90" cy="6" r="2.6" fill={RED} className="pt-blink" />
+      <circle cx="30" cy="6" r="2.2" fill={FG} />
+      <path d="M60 20 C80 20 88 36 88 52 C88 70 76 82 60 82 C44 82 32 70 32 52 C32 36 40 20 60 20 Z" fill={BG} stroke={FG} strokeWidth="2" />
+      <path d="M35 42 C39 24 81 24 85 42 L78 42 C74 31 46 31 42 42 Z" fill={FG} />
+      <circle cx="60" cy="55" r="15" fill={FG} />
+      <circle cx="60" cy="55" r="11" fill={BG} />
+      <circle cx="60" cy="55" r="7" fill="none" stroke={G1} strokeWidth=".8" />
+      <g className="pt-spin" style={{ transformOrigin: '60px 55px' }}>
+        <path d="M60 55 L60 44 A11 11 0 0 1 69.5 49.5 Z" fill={RED} opacity=".75" />
       </g>
-      <path d="M8 120 C10 92 28 82 50 82 C72 82 88 92 90 120 Z" fill={FG} />
-      <circle cx="50" cy="52" r="22" fill={FG} />
-      <rect x="49" y="32" width="2" height="40" fill={BG} />
-      <rect x="38" y="48" width="7" height="4" fill={BG} />
-      <rect x="55" y="48" width="7" height="4" fill={G2} />
-      <path d="M50 92 L44 104 L50 116 L56 104 Z" fill={BG} />
+      <circle cx="60" cy="55" r="2" fill={FG} />
+      <path d="M54 110 L60 104 L66 110 L60 116 Z" fill="none" stroke={BG} strokeWidth="1.4" />
     </g>
   );
 }
 
-function Bulwark() {
+function Resonance({ h }: P) {
   return (
     <g>
-      <path d="M26 120 L30 92 H90 L94 120 Z" fill={FG} />
-      <rect x="10" y="84" width="30" height="22" fill={G1} />
-      <rect x="80" y="84" width="30" height="22" fill={G1} />
-      <path d="M10 92 H40 M80 92 H110" stroke={BG} strokeWidth="2" />
-      <path d="M38 26 H82 V66 L60 80 L38 66 Z" fill={FG} />
-      <rect x="44" y="44" width="32" height="5" fill={BG} />
-      <rect x="57" y="44" width="6" height="22" fill={BG} />
-      <path d="M60 96 L70 106 L60 116 L50 106 Z" fill={BG} />
-      <path d="M60 100 L66 106 L60 112 L54 106 Z" fill={FG} />
+      <path d="M60 8 V118" stroke={FG} strokeWidth=".8" />
+      <path d="M56 12 H64 M57 30 H63 M57 88 H63" stroke={FG} strokeWidth=".8" />
+      <path d="M10 120 C14 100 30 92 48 90 L60 96 V120 Z" fill={FG} />
+      <path d="M60 96 L72 90 C90 92 106 100 110 120 H60 Z" fill={h} stroke={FG} strokeWidth="1" strokeDasharray="3 2" />
+      <g className="pt-drift" opacity=".45">
+        <path d="M68 22 C86 22 96 36 96 52 C96 70 84 82 68 82" fill="none" stroke={FG} strokeWidth="1" strokeDasharray="2 2" />
+      </g>
+      <path d="M60 22 C42 22 32 36 32 52 C32 70 44 82 60 82 Z" fill={FG} />
+      <path d="M60 22 C78 22 88 36 88 52 C88 70 76 82 60 82 Z" fill={BG} stroke={FG} strokeWidth="1.5" strokeDasharray="3 2" />
+      <path d="M60 30 C72 30 80 40 80 52" fill="none" stroke={G1} strokeWidth=".8" />
+      <rect x="39" y="50" width="13" height="3.2" fill={BG} />
+      <rect x="68" y="50" width="13" height="3.2" fill={RED} className="pt-blink" />
+      <path d="M44 68 H56" stroke={BG} strokeWidth="1.4" />
+      <path d="M64 68 H76" stroke={FG} strokeWidth="1" strokeDasharray="2 2" />
+      <path d="M60 4 L63 8 L60 12 L57 8 Z" fill={FG} />
     </g>
   );
 }
 
-const SQUAD_ART: Record<string, () => JSX.Element> = { scout: Scout, resonance: Resonance, bulwark: Bulwark };
-
-function Patrol() {
+function Bulwark({ h }: P) {
   return (
     <g>
-      <path d="M22 120 L28 88 H92 L98 120 Z" fill={FG} />
-      <path d="M36 58 A24 24 0 0 1 84 58 V64 H36 Z" fill={FG} />
-      <rect x="40" y="52" width="40" height="6" fill={BG} />
-      <circle className="pt-scanred" cx="46" cy="55" r="2.5" fill={RED} />
-      <rect x="44" y="64" width="32" height="20" fill={G1} />
-      <circle cx="52" cy="74" r="5" fill="none" stroke={BG} strokeWidth="2" />
-      <circle cx="68" cy="74" r="5" fill="none" stroke={BG} strokeWidth="2" />
-      <path d="M14 112 L104 72" stroke={G2} strokeWidth="9" />
-      <path d="M14 112 L104 72" stroke={FG} strokeWidth="2" />
-      <path d="M100 66 L110 70" stroke={FG} strokeWidth="3" />
+      <Sym>
+        <path d="M62 92 L96 86 L113 100 L109 120 H62 Z" fill={h} stroke={FG} strokeWidth="1.4" />
+        <circle cx="98" cy="96" r="1.6" fill={FG} />
+        <circle cx="104" cy="106" r="1.6" fill={FG} />
+        <path d="M84 26 V62 C84 74 72 84 60 88" fill="none" stroke={FG} strokeWidth="2" />
+      </Sym>
+      <path d="M44 92 H76 L72 120 H48 Z" fill={FG} />
+      <path d="M60 97 L68 106 L60 115 L52 106 Z" fill={BG} />
+      <path d="M60 101 L64 106 L60 111 L56 106 Z" fill={FG} />
+      <path d="M60 16 L84 26 V62 C84 74 72 84 60 88 C48 84 36 74 36 62 V26 Z" fill={h} />
+      <path d="M60 16 L84 26 M60 16 L36 26" stroke={FG} strokeWidth="2" />
+      <path d="M60 24 L77 32 V60 C77 70 69 77 60 81 C51 77 43 70 43 60 V32 Z" fill={FG} />
+      <rect x="46" y="44" width="28" height="4" fill={BG} />
+      <rect x="58" y="44" width="4" height="22" fill={BG} />
+      <rect x="46" y="44" width="5" height="4" fill={RED} className="pt-scan" />
+      <path d="M60 4 L63.5 16 H56.5 Z" fill={FG} />
     </g>
   );
 }
 
-function Mimicer() {
+const SQUAD_ART: Record<string, (p: P) => JSX.Element> = { scout: Scout, resonance: Resonance, bulwark: Bulwark };
+const SQUAD_CODE: Record<string, string> = { scout: 'SQ-01 OBS', resonance: 'SQ-02 RES', bulwark: 'SQ-03 BLW' };
+
+// ─── 적 ──────────────────────────────────────────────
+function Patrol({ h }: P) {
+  return (
+    <g>
+      <path d="M16 120 L22 96 L48 90 H72 L98 96 L104 120 Z" fill={h} stroke={FG} strokeWidth="1.2" />
+      <rect x="49" y="91" width="22" height="10" fill={FG} />
+      <text x="60" y="98.5" textAnchor="middle" fontFamily="IBM Plex Mono, monospace" fontSize="6.5" fontWeight="700" fill={BG}>P-07</text>
+      <path d="M36 60 C36 36 46 24 60 24 C74 24 84 36 84 60 V70 L76 80 H44 L36 70 Z" fill={FG} />
+      <path d="M60 24 V38" stroke={BG} strokeWidth="1.4" />
+      <rect x="38" y="50" width="44" height="9" fill={BG} />
+      <circle className="pt-scanred" cx="45" cy="54.5" r="2.5" fill={RED} />
+      <path d="M48 66 V75 M54 66 V75 M60 66 V75 M66 66 V75 M72 66 V75" stroke={BG} strokeWidth="1.6" />
+      <Sym><path d="M84 54 H90 V64 H84" fill="none" stroke={FG} strokeWidth="1.4" /></Sym>
+      <path d="M14 120 L110 90" stroke={G2} strokeWidth="6" />
+      <path d="M14 120 L110 90" stroke={FG} strokeWidth="1.4" />
+    </g>
+  );
+}
+
+function Mimicer({ h, d }: P) {
   return (
     <g>
       <defs>
-        <linearGradient id="mimgrad" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={`${d}-m`} x1="0" y1="0" x2=".6" y2="1">
           <stop offset="0" stopColor={FG} />
+          <stop offset=".55" stopColor={G1} />
           <stop offset="1" stopColor={G2} />
         </linearGradient>
       </defs>
-      <path className="pt-wobble" d="M60 12 C88 10 104 34 98 60 C94 80 106 96 96 112 C84 122 36 122 24 112 C14 96 26 80 22 60 C16 34 32 14 60 12 Z" fill="none" stroke={FG} strokeWidth="2" />
-      <ellipse cx="60" cy="54" rx="22" ry="30" fill="url(#mimgrad)" />
-      <path d="M44 34 L56 26 M42 46 L64 30" stroke={BG} strokeWidth="2" />
-      <circle cx="60" cy="56" r="6" fill={BG} />
-      <path d="M50 76 C50 66 70 66 70 76 Z" fill={BG} />
-      <path d="M30 100 C40 92 50 104 60 96 C70 104 80 92 90 100" fill="none" stroke={G1} strokeWidth="2" />
-    </g>
-  );
-}
-
-function Watcher() {
-  return (
-    <g>
-      <path d="M44 120 L50 70 H70 L76 120 Z" fill={FG} />
-      <path d="M50 70 L42 120 M70 70 L78 120" stroke={G2} strokeWidth="2" />
-      <path d="M14 44 A50 50 0 0 1 22 20 M106 44 A50 50 0 0 0 98 20" stroke={G1} strokeWidth="2" fill="none" strokeDasharray="3 4" />
-      <path d="M24 44 Q60 4 96 44 Q60 84 24 44 Z" fill={BG} stroke={FG} strokeWidth="3" />
-      <circle cx="60" cy="44" r="14" fill={FG} />
-      <circle className="pt-look" cx="60" cy="44" r="5" fill={RED} />
-      <path className="pt-lid" d="M24 44 Q60 4 96 44 Q60 4 24 44 Z" fill={FG} />
-    </g>
-  );
-}
-
-function Devourer() {
-  return (
-    <g>
-      <path d="M12 120 C8 70 26 24 64 22 C98 20 114 60 108 120 Z" fill={FG} />
-      <g className="pt-chomp">
-        <ellipse cx="60" cy="72" rx="34" ry="20" fill={BG} />
-        <path d="M28 66 L34 76 L40 64 L46 76 L52 62 L58 76 L64 62 L70 76 L76 62 L82 76 L88 64 L92 70" fill={FG} />
-        <path d="M30 80 L36 72 L42 84 L48 72 L54 86 L60 72 L66 86 L72 72 L78 84 L84 72 L90 80" fill={G1} />
+      <path className="pt-wobble" d="M60 10 C90 8 106 34 100 60 C96 80 108 96 98 112 C86 122 34 122 22 112 C12 96 24 80 20 60 C14 34 30 12 60 10 Z" fill="none" stroke={G1} strokeWidth="1" strokeDasharray="2 3" />
+      <ellipse cx="60" cy="56" rx="25" ry="32" fill={`url(#${d}-m)`} />
+      <ellipse cx="60" cy="56" rx="25" ry="32" fill={h} opacity=".5" />
+      <ellipse cx="60" cy="56" rx="25" ry="32" fill="none" stroke={FG} strokeWidth="1.6" />
+      <path d="M44 34 Q50 26 60 25" fill="none" stroke={BG} strokeWidth="2" strokeLinecap="round" />
+      <path d="M60 26 V86" stroke={BG} strokeWidth=".7" opacity=".6" />
+      <Sym><path d="M43 52 Q50 45 56 52 Q50 57 43 52 Z" fill={BG} /></Sym>
+      <circle cx="67" cy="52" r="1.8" fill={RED} className="pt-look" />
+      <g stroke={FG} strokeWidth="2" strokeLinecap="round">
+        <path d="M50 86 V96" /><path d="M60 88 V104" /><path d="M70 86 V93" />
       </g>
-      <circle cx="44" cy="40" r="3" fill={RED} />
-      <circle cx="60" cy="34" r="3.5" fill={RED} />
-      <circle cx="76" cy="40" r="3" fill={RED} />
-      <path d="M60 108 C52 108 52 100 60 100 C70 100 70 114 58 114" fill="none" stroke={BG} strokeWidth="2" />
+      <circle cx="50" cy="98.5" r="2" fill={FG} />
+      <circle cx="60" cy="107" r="2.5" fill={FG} />
+      <circle cx="70" cy="95.5" r="1.7" fill={FG} />
     </g>
   );
 }
 
-function Phantom() {
+function Watcher({ h }: P) {
   return (
     <g>
-      <path d="M60 10 C32 10 24 42 26 70 L16 120 H104 L94 70 C96 42 88 10 60 10 Z" fill={FG} />
-      <path d="M16 120 L24 110 L32 120 L40 108 L48 120 L56 110 L64 120 L72 108 L80 120 L88 110 L96 120 L104 112" fill={BG} />
-      <ellipse cx="60" cy="50" rx="20" ry="24" fill={BG} />
-      <g className="pt-f1"><ellipse cx="60" cy="50" rx="12" ry="16" fill={FG} /><path d="M53 46 H58 M62 46 H67" stroke={BG} strokeWidth="2.5" /><path d="M55 58 Q60 62 65 58" stroke={BG} strokeWidth="2" fill="none" /></g>
-      <g className="pt-f2"><ellipse cx="52" cy="48" rx="11" ry="15" fill="none" stroke={FG} strokeWidth="2" /><path d="M46 44 H50 M54 44 H58" stroke={FG} strokeWidth="2" /></g>
-      <g className="pt-f3"><ellipse cx="68" cy="52" rx="11" ry="15" fill="none" stroke={G1} strokeWidth="2" /><circle cx="68" cy="48" r="2" fill={RED} /></g>
+      <circle cx="60" cy="56" r="46" fill="none" stroke={G1} strokeDasharray="2 3" />
+      <circle cx="60" cy="56" r="40" fill={BG} stroke={FG} strokeWidth="1.6" />
+      {Array.from({ length: 24 }, (_, i) => (
+        <path key={i} transform={`rotate(${i * 15} 60 56)`} d={i % 2 ? 'M60 16 V19' : 'M60 16 V22'} stroke={FG} strokeWidth="1" />
+      ))}
+      <g className="pt-spin-slow" style={{ transformOrigin: '60px 56px' }}>
+        {[0, 60, 120, 180, 240, 300].map((a) => (
+          <path key={a} transform={`rotate(${a} 60 56)`} d="M60 24 L82 36 L62 42 Z" fill={h} stroke={FG} strokeWidth=".9" />
+        ))}
+      </g>
+      <circle cx="60" cy="56" r="14" fill={BG} stroke={FG} strokeWidth="2" />
+      <g className="pt-look">
+        <circle cx="60" cy="56" r="8" fill={RED} />
+        <circle cx="60" cy="56" r="3.2" fill={BG} />
+        <circle cx="57.5" cy="53.5" r="1.4" fill={FG} />
+      </g>
+      <path d="M52 100 L60 114 L68 100" fill="none" stroke={FG} strokeWidth="1.2" />
     </g>
   );
 }
 
-function Shard() {
+function Devourer({ h }: P) {
   return (
     <g>
+      <circle cx="60" cy="58" r="50" fill="none" stroke={FG} strokeWidth=".8" strokeDasharray="1 3" />
+      <circle cx="60" cy="58" r="44" fill={FG} />
+      <circle cx="60" cy="58" r="44" fill={h} opacity=".35" />
+      {[-60, -30, 0, 30, 60].map((a) => (
+        <circle key={a} transform={`rotate(${a} 60 58)`} cx="60" cy="19" r={a === 0 ? 2.8 : 2.2} fill={RED} />
+      ))}
+      <g className="pt-chomp" style={{ transformOrigin: '60px 60px' }}>
+        <circle cx="60" cy="60" r="30" fill={BG} />
+        {Array.from({ length: 16 }, (_, i) => (
+          <path key={i} transform={`rotate(${i * 22.5} 60 60)`} d="M60 30 L64.5 43 L55.5 43 Z" fill={FG} />
+        ))}
+        {Array.from({ length: 12 }, (_, i) => (
+          <path key={'i' + i} transform={`rotate(${i * 30 + 15} 60 60)`} d="M60 44 L62.6 51 L57.4 51 Z" fill={G1} />
+        ))}
+        <circle cx="60" cy="60" r="4.5" fill={RED} opacity=".85" />
+      </g>
+    </g>
+  );
+}
+
+function Phantom({ h }: P) {
+  return (
+    <g>
+      <path d="M60 10 C34 10 26 40 28 66 L18 116 H102 L92 66 C94 40 86 10 60 10 Z" fill={h} stroke={FG} strokeWidth="1.6" />
+      <path d="M60 10 C48 22 44 40 46 58 M60 10 C72 22 76 40 74 58" fill="none" stroke={FG} strokeWidth=".8" />
+      <path d="M18 116 L26 106 L34 116 L42 104 L50 116 L58 106 L66 116 L74 104 L82 116 L90 106 L98 116 L102 110 V120 H18 Z" fill={BG} />
+      <ellipse cx="60" cy="52" rx="18" ry="22" fill={BG} stroke={FG} strokeWidth="1" />
+      <g className="pt-f1"><ellipse cx="60" cy="52" rx="11" ry="15" fill={FG} /><path d="M53 48 H58 M62 48 H67" stroke={BG} strokeWidth="2.2" /><path d="M55 60 Q60 63 65 60" stroke={BG} strokeWidth="1.6" fill="none" /></g>
+      <g className="pt-f2"><ellipse cx="54" cy="50" rx="10" ry="14" fill="none" stroke={FG} strokeWidth="1.6" /><path d="M48 46 H52 M56 46 H60" stroke={FG} strokeWidth="1.6" /></g>
+      <g className="pt-f3"><ellipse cx="66" cy="54" rx="10" ry="14" fill="none" stroke={G1} strokeWidth="1.6" /><circle cx="66" cy="50" r="2.2" fill={RED} /></g>
+    </g>
+  );
+}
+
+function Shard({ h }: P) {
+  return (
+    <g>
+      <ellipse cx="60" cy="60" rx="48" ry="14" fill="none" stroke={G1} strokeDasharray="2 3" transform="rotate(-20 60 60)" />
       <g className="pt-spin" style={{ transformOrigin: '60px 60px' }}>
-        <path d="M60 14 L74 52 L52 46 Z" fill={FG} />
-        <path d="M100 54 L68 66 L76 46 Z" fill={G1} />
-        <path d="M70 104 L58 68 L80 74 Z" fill={FG} />
-        <path d="M22 76 L52 62 L46 84 Z" fill={G1} />
-        <path d="M28 30 L54 56 L36 54 Z" fill={G2} stroke={FG} />
+        <path d="M60 12 L74 50 L52 46 Z" fill={FG} />
+        <path d="M60 12 L52 46 L48 30 Z" fill={h} stroke={FG} strokeWidth=".8" />
+        <path d="M104 54 L70 66 L78 44 Z" fill={h} stroke={FG} strokeWidth=".8" />
+        <path d="M70 106 L58 70 L82 76 Z" fill={FG} />
+        <path d="M18 78 L50 62 L44 86 Z" fill={h} stroke={FG} strokeWidth=".8" />
+        <path d="M26 28 L54 56 L34 54 Z" fill={BG} stroke={FG} strokeWidth="1" />
       </g>
-      <circle className="pt-blink" cx="60" cy="60" r="4" fill={RED} />
+      <circle cx="60" cy="60" r="7" fill="none" stroke={FG} strokeWidth="1" />
+      <circle className="pt-blink" cx="60" cy="60" r="3.5" fill={RED} />
     </g>
   );
 }
 
-function Ark({ squad }: { squad: string }) {
+function Ark({ squad, h, d }: P & { squad: string }) {
   const Art = SQUAD_ART[squad] ?? Scout;
   return (
     <g>
       <rect x="0" y="0" width="120" height="120" fill={FG} />
-      <g transform="translate(120 0) scale(-1 1)" style={{ filter: 'invert(1)' }}>
-        <Art />
+      <g transform="translate(120 0) scale(-1 1)" style={{ ['--fg' as string]: '#050505', ['--bg' as string]: '#f2f2ee' }}>
+        <Art h={`url(#${d}-hi)`} d={d} />
       </g>
-      <g className="pt-spin-slow" style={{ transformOrigin: '60px 50px' }}>
-        {[0, 60, 120, 180, 240, 300].map((a) => (
-          <path key={a} transform={`rotate(${a} 60 50)`} d="M60 0 L64 10 L56 10 Z" fill={BG} />
+      <g className="pt-spin-slow" style={{ transformOrigin: '60px 52px' }}>
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+          <path key={a} transform={`rotate(${a} 60 52)`} d="M60 0 L63 9 L57 9 Z" fill={BG} />
         ))}
       </g>
       <path d="M74 0 L66 30 L76 44 L62 70 L70 92 L64 120" fill="none" stroke={RED} strokeWidth="2" />
@@ -169,18 +260,36 @@ function Ark({ squad }: { squad: string }) {
   );
 }
 
-const ENEMY_ART: Record<string, () => JSX.Element> = {
+const ENEMY_ART: Record<string, (p: P) => JSX.Element> = {
   patrol: Patrol, mimicer: Mimicer, watcher: Watcher, devourer: Devourer, phantom: Phantom, shard: Shard,
+};
+const ENEMY_CODE: Record<string, string> = {
+  patrol: 'CL-PTR', mimicer: 'CL-MIM', watcher: 'CL-WTC', devourer: 'CL-DVR', phantom: 'EL-PHM', shard: 'RS-SHD', ark: 'BOSS ARK',
 };
 
 export function Portrait({ kind, squad = 'scout', size = 96 }: { kind: string; squad?: string; size?: number }) {
+  const d = 'pt' + useId().replace(/[^a-zA-Z0-9]/g, '');
+  const h = `url(#${d}-h)`;
   let body: JSX.Element;
-  if (kind === 'ark') body = <Ark squad={squad} />;
-  else if (SQUAD_ART[kind]) { const A = SQUAD_ART[kind]; body = <A />; }
-  else { const A = ENEMY_ART[kind] ?? Mimicer; body = <A />; }
+  if (kind === 'ark') body = <Ark squad={squad} h={h} d={d} />;
+  else if (SQUAD_ART[kind]) { const A = SQUAD_ART[kind]; body = <A h={h} d={d} />; }
+  else { const A = ENEMY_ART[kind] ?? Mimicer; body = <A h={h} d={d} />; }
   return (
     <svg className="portrait" width={size} height={size} viewBox="0 0 120 120" aria-hidden>
+      <defs>
+        <pattern id={`${d}-h`} width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="3" height="3" fill={BG} />
+          <path d="M0 0 V3" stroke={FG} strokeWidth="1" opacity=".55" />
+        </pattern>
+        <pattern id={`${d}-hi`} width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="3" height="3" fill="#f2f2ee" />
+          <path d="M0 0 V3" stroke="#050505" strokeWidth="1" opacity=".55" />
+        </pattern>
+      </defs>
+      {kind !== 'ark' && <Frame />}
       {body}
+      {kind === 'ark' && <Frame />}
+      <Label code={SQUAD_CODE[kind] ?? ENEMY_CODE[kind] ?? ''} />
     </svg>
   );
 }
