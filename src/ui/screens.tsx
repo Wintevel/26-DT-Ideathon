@@ -235,8 +235,23 @@ function nodeDesc(n: MapNode) {
 
 export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onEnter: (id: string) => void; onDeck: () => void; onRelics: () => void }) {
   const [sel, setSel] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
   const [scan, setScan] = useState(true);
   const reach = reachable(run);
+  const choose = (id: string) => {
+    if (reach.length < 2) return onEnter(id);
+    setPicked(picked === id ? null : id);
+  };
+  const pk = picked ? nodeById(run, picked) : null;
+  useEffect(() => {
+    if (!picked) return;
+    const k = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); setPicked(null); }
+      else if (e.key === 'Enter') onEnter(picked);
+    };
+    window.addEventListener('keydown', k, true);
+    return () => window.removeEventListener('keydown', k, true);
+  }, [picked, onEnter]);
   const cur = currentStage(run);
   useEffect(() => {
     const t = setTimeout(() => setScan(false), 3300);
@@ -260,7 +275,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
           </div>
           {run.revealAll && <div className="k">안테나 신호: 전 구역 개방</div>}
         </div>
-        <div className="map-scroll">
+        <div className="map-scroll" onClick={() => setPicked(null)}>
           <div className="map">
             {Array.from({ length: STAGES }, (_, i) => (
               <div key={i} className={`colhead ${i === cur + 1 ? 'next' : ''}`} style={{ left: `${X(i)}%` }}>
@@ -297,9 +312,9 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
               return (
                 <div
                   key={n.id}
-                  className={`node ${isHidden ? '' : n.type} ${isHidden ? 'hidden' : ''} ${isReach ? 'reach' : ''} ${isCur ? 'cur' : ''} ${past ? 'past' : ''} ${wake ? 'wake' : justRevealed && scan ? 'reveal' : ''}`}
+                  className={`node ${isHidden ? '' : n.type} ${isHidden ? 'hidden' : ''} ${isReach ? 'reach' : ''} ${picked === n.id ? 'picked' : ''} ${isCur ? 'cur' : ''} ${past ? 'past' : ''} ${wake ? 'wake' : justRevealed && scan ? 'reveal' : ''}`}
                   style={{ left: `${X(n.stage)}%`, top: `${Y(n.y)}%`, animationDelay: !wake && justRevealed && scan ? `${0.5 + n.idx * 0.25}s` : undefined, ['--wd' as string]: `${wd}s` }}
-                  onClick={() => isReach && onEnter(n.id)}
+                  onClick={(ev) => { ev.stopPropagation(); if (isReach) choose(n.id); }}
                   onMouseEnter={() => !isHidden && setSel(n.id)}
                 >
                   {isHidden ? (
@@ -308,7 +323,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
                     <>
                       <div className="ty"><span>{NODE_INFO[n.type][0]}</span><Icon name={n.type} size={15} /></div>
                       <b>{nodeTitle(n)}</b>
-                      <div className="go">{isCur ? '현재 위치' : isReach ? '진입 가능 →' : past ? '돌파' : ''}</div>
+                      <div className="go">{isCur ? '현재 위치' : picked === n.id ? '선택됨' : isReach ? (reach.length > 1 ? '눌러서 검토' : '진입 가능 →') : past ? '돌파' : ''}</div>
                     </>
                   )}
                 </div>
@@ -317,6 +332,27 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
           </div>
         </div>
       </div>
+      {pk && (
+        <aside className="route-panel" key={pk.id}>
+          <div className="rp-head">
+            <div className="mono mute" style={{ fontSize: 11, letterSpacing: '.14em' }}>ROUTE · {pk.type === 'boss' ? 'BOSS' : `STAGE ${String(pk.stage + 1).padStart(2, '0')}`} · 후보 {reach.indexOf(pk.id) + 1}/{reach.length}</div>
+            <button className="btn ghost" onClick={() => setPicked(null)}>닫기</button>
+          </div>
+          <div className="rp-ico"><Icon name={pk.type} size={40} stroke={1.3} /></div>
+          <div className="mono" style={{ fontSize: 12, color: 'var(--mute)' }}>{NODE_INFO[pk.type][0]}</div>
+          <h3>{nodeTitle(pk)}</h3>
+          <p className="mute">{nodeDesc(pk)}</p>
+          {pk.encounter && (
+            <div className="rp-foes">
+              {pk.encounter.map((id, i) => (
+                <div key={id + i}><Portrait kind={id} squad={run.squad} size={56} /><div><b>{ENEMIES[id].name}</b><small>체력 약 {Math.round(ENEMIES[id].hp[0] * depthDef(run.depth).mult)}</small></div></div>
+              ))}
+            </div>
+          )}
+          <div className="rp-next mono mute">이후 연결 {pk.next.length}갈래 · 다른 후보는 이번 구역에서 닫힙니다</div>
+          <button className="btn solid icon-btn rp-go" onClick={() => onEnter(pk.id)}>루트 확정 <Icon name="descend" size={16} /></button>
+        </aside>
+      )}
       <div className="mapfoot">
         {focus && (
           <>
