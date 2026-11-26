@@ -211,7 +211,7 @@ button:disabled { cursor: not-allowed; }
 .mapfoot .facts { font-family: var(--mono); font-size: 12px; color: var(--mute); }
 
 /* ── 전투 ── */
-.combat { flex: 1; display: grid; grid-template-rows: 1fr auto; min-height: 0; }
+.combat:not(.node) { flex: 1; display: grid; grid-template-rows: 1fr auto; min-height: 0; }
 .field { position: relative; display: grid; grid-template-columns: 1fr 150px 1fr; align-items: center; padding: 70px 28px 40px; min-height: 420px; }
 .side { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; position: relative; }
 .side.me { flex-direction: column; }
@@ -1118,7 +1118,7 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .rw-relic svg { color: var(--accent); }
 
 /* 전투 상단 정보 줄 (상단 바 대신) */
-.combat { position: relative; }
+.combat:not(.node) { position: relative; }
 .chud { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 22px; white-space: nowrap; font-family: var(--mono); font-size: 13px; }
 .ch-where { font-size: 11px; color: var(--mute); letter-spacing: .14em; padding-right: 18px; border-right: 1px solid var(--line2); }
 .ch-stat { display: flex; align-items: center; gap: 7px; }
@@ -1280,13 +1280,13 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .dp-name strong { white-space: nowrap; }
 
 /* v11 — combat sci-fi backdrop */
-.combat { isolation: isolate; overflow: hidden;
+.combat:not(.node) { isolation: isolate; overflow: hidden;
   background:
     radial-gradient(ellipse 60% 45% at 50% 38%, rgba(120, 90, 255, .10), transparent 70%),
     radial-gradient(ellipse 40% 30% at 15% 20%, rgba(60, 200, 255, .06), transparent 70%),
     radial-gradient(ellipse 40% 30% at 85% 25%, rgba(169, 116, 255, .07), transparent 70%),
     linear-gradient(180deg, #07080d 0%, #0b0d16 55%, #06070b 100%); }
-.combat::before { content: ''; position: absolute; left: -50%; right: -50%; bottom: -10%; height: 62%; z-index: -1; pointer-events: none;
+.combat:not(.node)::before { content: ''; position: absolute; left: -50%; right: -50%; bottom: -10%; height: 62%; z-index: -1; pointer-events: none;
   background-image:
     linear-gradient(rgba(140, 150, 255, .16) 1px, transparent 1px),
     linear-gradient(90deg, rgba(140, 150, 255, .16) 1px, transparent 1px);
@@ -1295,7 +1295,7 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 35%, #000 70%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0%, #000 35%, #000 70%, transparent 100%);
   animation: gridDrift 14s linear infinite; }
-.combat::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+.combat:not(.node)::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
     repeating-linear-gradient(180deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px),
     radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.5), transparent),
@@ -1336,7 +1336,7 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 
 /* ─── v13: 심도별 분위기 · 박스 없는 캐릭터 · 챕터 진척도 ─── */
 /* 공통 디스토피아 SF 바탕 위에 심도마다 색과 모티프를 바꾼다 */
-.combat, .depth-amb { --amb-a: rgba(120, 90, 255, .10); --amb-b: rgba(60, 200, 255, .06); --amb-grid: rgba(140, 150, 255, .16); --amb-top: #07080d; --amb-mid: #0b0d16; --amb-motif: none; --amb-motif-size: auto; --amb-motif-anim: none; }
+.combat:not(.node), .depth-amb { --amb-a: rgba(120, 90, 255, .10); --amb-b: rgba(60, 200, 255, .06); --amb-grid: rgba(140, 150, 255, .16); --amb-top: #07080d; --amb-mid: #0b0d16; --amb-motif: none; --amb-motif-size: auto; --amb-motif-anim: none; }
 .combat[data-depth="-1"], .depth-amb[data-depth="-1"] { --amb-a: rgba(150, 170, 190, .10); --amb-b: rgba(120, 140, 160, .06); --amb-grid: rgba(170, 185, 200, .14); --amb-top: #090a0c; --amb-mid: #0d0f12;
   --amb-motif: repeating-linear-gradient(90deg, rgba(200,210,220,.035) 0 1px, transparent 1px 120px); }
 .combat[data-depth="1"], .depth-amb[data-depth="1"] { --amb-a: rgba(255, 80, 200, .12); --amb-b: rgba(120, 60, 255, .08); --amb-grid: rgba(255, 120, 220, .15); --amb-top: #0c060d; --amb-mid: #140a18;
@@ -1348,13 +1348,13 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .combat[data-depth="4"], .depth-amb[data-depth="4"] { --amb-a: rgba(255, 60, 40, .16); --amb-b: rgba(255, 140, 60, .07); --amb-grid: rgba(255, 90, 70, .17); --amb-top: #0d0504; --amb-mid: #170806;
   --amb-motif: radial-gradient(1.5px 1.5px at 20% 80%, rgba(255,140,80,.8), transparent), radial-gradient(1px 1px at 45% 60%, rgba(255,120,60,.7), transparent), radial-gradient(1.5px 1.5px at 70% 85%, rgba(255,160,90,.7), transparent), radial-gradient(1px 1px at 85% 55%, rgba(255,110,60,.6), transparent), radial-gradient(1px 1px at 10% 45%, rgba(255,130,70,.6), transparent);
   --amb-motif-size: 100% 300px; --amb-motif-anim: embers 6s linear infinite; }
-.combat, .depth-amb {
+.combat:not(.node), .depth-amb {
   background:
     radial-gradient(ellipse 60% 45% at 50% 38%, var(--amb-a), transparent 70%),
     radial-gradient(ellipse 40% 30% at 15% 20%, var(--amb-b), transparent 70%),
     radial-gradient(ellipse 40% 30% at 85% 25%, var(--amb-a), transparent 70%),
     linear-gradient(180deg, var(--amb-top) 0%, var(--amb-mid) 55%, #050506 100%); }
-.combat::before { background-image: linear-gradient(var(--amb-grid) 1px, transparent 1px), linear-gradient(90deg, var(--amb-grid) 1px, transparent 1px); }
+.combat:not(.node)::before { background-image: linear-gradient(var(--amb-grid) 1px, transparent 1px), linear-gradient(90deg, var(--amb-grid) 1px, transparent 1px); }
 .combat .field::before { content: ''; position: absolute; inset: -40px 0 0; z-index: -1; pointer-events: none; background: var(--amb-motif); background-size: var(--amb-motif-size); animation: var(--amb-motif-anim); }
 .combat .field { isolation: isolate; }
 @keyframes rainUp { from { background-position: 0 0, 0 0; } to { background-position: 0 -46px, 0 -140px; } }
@@ -1435,9 +1435,9 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .combat .unit.boss .pedestal { width: 220px; }
 
 /* ─── v14: 장면 배경(흑백), 챕터 화면 플랫 ─── */
-.combat, .depth-amb { background: #050505; }
-.combat::before, .combat .field::before { display: none; }
-.combat::after { background: repeating-linear-gradient(180deg, rgba(255,255,255,.016) 0 1px, transparent 1px 3px); }
+.combat:not(.node), .depth-amb { background: #050505; }
+.combat:not(.node)::before, .combat .field::before { display: none; }
+.combat:not(.node)::after { background: repeating-linear-gradient(180deg, rgba(255,255,255,.016) 0 1px, transparent 1px 3px); }
 .depth-amb { position: relative; isolation: isolate; }
 .depth-scene { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .depth-scene svg { width: 100%; height: 100%; display: block; }
