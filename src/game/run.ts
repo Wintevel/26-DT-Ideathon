@@ -1,12 +1,13 @@
 // 런(한 판) 진행: 맵 생성, 보상, 이벤트, 상점, 정산
-import { BASE_DECK, CARD_LIST, CARDS, depthDef, ENCOUNTERS, ENCOUNTERS_EARLY, EVENTS, RELIC_LIST, SQUADS, ABSORB_OF, ENEMIES } from './data';
+import { BASE_DECK, CARD_LIST, CARDS, CHAPTERS, depthDef, ENCOUNTERS, ENCOUNTERS_EARLY, EVENTS, RELIC_LIST, SQUADS, ABSORB_OF, ENEMIES } from './data';
 import { shuffle, erosionGain } from './engine';
 import type { CardInst, CombatState, MapNode, MetaSave, NodeType, RunState } from './types';
 
 const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 const rint = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
 
-export const STAGES = 6; // STAGE 01~05 + BOSS
+export const STAGES = 5; // 챕터마다 STAGE 01~04 + BOSS
+export const CHAPTER_COUNT = 3;
 
 export function newRun(squadId: string, depth: number, meta: string[]): RunState {
   const sq = SQUADS.find((s) => s.id === squadId)!;
@@ -24,7 +25,8 @@ export function newRun(squadId: string, depth: number, meta: string[]): RunState
     kakpul: sq.kakpul + (meta.includes('awaken') ? 15 : 0),
     erosion: Math.min(90, sq.erosion + (depthDef(depth).startEro ?? 0)),
     mirrorCharges: 4 + (meta.includes('infinite') ? 1 : 0),
-    map: genMap(),
+    chapter: 0,
+    map: genMap(0),
     pos: null,
     visited: [],
     revealAll: false,
@@ -33,8 +35,8 @@ export function newRun(squadId: string, depth: number, meta: string[]): RunState
   };
 }
 
-function genMap(): MapNode[][] {
-  const counts = [1, 2, rint(2, 3), rint(2, 3), rint(2, 3), 1];
+function genMap(chapter: number): MapNode[][] {
+  const counts = [chapter === 0 ? 1 : 2, 2, rint(2, 3), rint(2, 3), 1];
   const map: MapNode[][] = counts.map((n, stage) =>
     Array.from({ length: n }, (_, idx) => ({
       id: `s${stage}n${idx}`,
@@ -45,19 +47,19 @@ function genMap(): MapNode[][] {
       next: [],
     })),
   );
-  map[0][0].type = 'combat';
-  map[0][0].encounter = pick(ENCOUNTERS_EARLY);
+  for (const n of map[0]) { n.type = 'combat'; if (chapter === 0) n.encounter = pick(ENCOUNTERS_EARLY); }
+  if (chapter > 0) map[0][1].type = 'event';
   // STAGE 02: 긴급(정예) + 일반 전투
   map[1][0].type = 'elite';
   map[1][1].type = 'combat';
-  const bag: NodeType[] = shuffle(['event', 'event', 'shop', 'rest', 'combat', 'combat', 'combat', 'event', 'combat']);
-  for (let st = 2; st <= 4; st++) {
-    for (const n of map[st]) n.type = bag.pop() ?? 'combat';
-  }
-  if (!map[4].some((n) => n.type === 'rest')) map[4][map[4].length - 1].type = 'rest';
-  if (!map[2].concat(map[3]).some((n) => n.type === 'shop')) map[3][0].type = 'shop';
-  map[5][0].type = 'boss';
-  map[5][0].encounter = ['ark'];
+  const bag: NodeType[] = shuffle(['event', 'shop', 'combat', 'combat', 'event', 'combat']);
+  for (const n of map[2]) n.type = bag.pop() ?? 'combat';
+  // STAGE 04: 보스 직전에는 휴식이 하나 이상
+  for (const n of map[3]) n.type = bag.pop() ?? 'event';
+  map[3][map[3].length - 1].type = 'rest';
+  if (!map[2].concat(map[3]).some((n) => n.type === 'shop')) map[2][0].type = 'shop';
+  map[4][0].type = 'boss';
+  map[4][0].encounter = [CHAPTERS[chapter]?.boss ?? 'ark'];
   const events = shuffle(EVENTS.map((e) => e.id));
   for (const col of map)
     for (const n of col) {
@@ -91,6 +93,18 @@ export function reachable(run: RunState): string[] {
   if (!run.pos) return run.map[0].map((n) => n.id);
   return nodeById(run, run.pos).next;
 }
+/** 중간 보스를 쓰러뜨린 뒤 다음 챕터로: 새 맵, 체력 30% 회복 */
+export function nextChapter(run: RunState): RunState {
+  const r = structuredClone(run);
+  r.chapter = (r.chapter ?? 0) + 1;
+  r.map = genMap(r.chapter);
+  r.pos = null;
+  r.visited = [];
+  r.revealAll = false;
+  r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.4));
+  return r;
+}
+export const isFinalChapter = (run: RunState) => (run.chapter ?? 0) >= CHAPTER_COUNT - 1;
 export function currentStage(run: RunState) {
   return run.pos ? nodeById(run, run.pos).stage : -1;
 }
@@ -102,6 +116,8 @@ export interface Reward {
   absorbOptions: string[];
   relic: string | null;
   boss?: boolean;
+  /** 중간 보스: 카드를 고르면 다음 챕터로 */
+  chapterClear?: boolean;
 }
 
 export function applyCombatResult(run: RunState, cs: CombatState): RunState {
@@ -125,10 +141,10 @@ export function makeReward(run: RunState, cs: CombatState): Reward {
   const owned = run.relics;
   const relicPool = RELIC_LIST.filter((x) => x.pool === 'elite' && !owned.includes(x.id));
   return {
-    kakpul: cs.kind === 'elite' ? rint(30, 38) : rint(12, 18),
+    kakpul: cs.kind === 'midboss' ? rint(45, 55) : cs.kind === 'elite' ? rint(30, 38) : rint(12, 18),
     cards,
     absorbOptions: [...new Set(absorbOptions)],
-    relic: cs.kind === 'elite' && relicPool.length ? pick(relicPool).id : null,
+    relic: (cs.kind === 'elite' || cs.kind === 'midboss') && relicPool.length ? pick(relicPool).id : null,
   };
 }
 
@@ -206,6 +222,7 @@ export function settle(run: RunState, outcome: 'lose' | 'eroded' | 'win' | 'abor
   const lines: [string, number][] = [
     ['돌파 노드', s.nodesCleared * 2],
     ['처치한 정예', s.elites * 3],
+    ['구역 보스 처치', (s.midBosses ?? 0) * 5],
     ['아크 처치', s.bossKilled ? 10 : 0],
     ['처음 모사한 적', s.newMimics.length * 2],
   ];

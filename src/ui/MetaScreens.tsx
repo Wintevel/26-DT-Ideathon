@@ -118,7 +118,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
               return (
                 <div key={e.id} className={`entry with-pt ${seen ? '' : 'lock'}`}>
                   <div className={`pt-frame ${seen ? '' : 'unseen'}`}><Portrait kind={e.id} squad={meta.archive[meta.archive.length - 1]?.squad ?? 'scout'} size={84} /></div>
-                  <div className="tagrow">{e.tier === 'boss' ? '구역 보스' : e.tier === 'elite' ? '정예' : e.tier === 'minion' ? '잔상' : '복제체'} · {mim ? '패턴 해독 완료' : seen ? '실루엣만 기록' : '미조우'}</div>
+                  <div className="tagrow">{e.tier === 'boss' ? '최종 보스' : e.tier === 'midboss' ? '구역 보스' : e.tier === 'elite' ? '정예' : e.tier === 'minion' ? '잔상' : '복제체'} · {mim ? '패턴 해독 완료' : seen ? '실루엣만 기록' : '미조우'}</div>
                   <h4>{seen ? e.name : '???'}</h4>
                   {seen && <p>체력 {e.hp[0]}{e.hp[1] !== e.hp[0] ? `~${e.hp[1]}` : ''}</p>}
                   <p>{mim || (seen && e.tier === 'boss') ? e.desc : seen ? '한 번 모사하면 행동 패턴이 공개됩니다.' : '조우하면 기록됩니다.'}</p>

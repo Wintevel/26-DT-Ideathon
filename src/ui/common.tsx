@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { CARDS, depthLabel, ENEMIES, RELICS, SQUADS } from '../game/data';
+import { CARDS, CHAPTERS, depthLabel, ENEMIES, RELICS, SQUADS } from '../game/data';
 import { defOf, tierOf, TIER_NAMES } from '../game/engine';
 import type { CardInst, RunState } from '../game/types';
 import { nodeById, STAGES } from '../game/run';
@@ -63,7 +63,7 @@ export function TopBar({ run, meta, onDeck, onRelics, onMenu, onMap }: { run: Ru
   return (
     <div className="topbar">
       <div className="where">
-        SECTOR 01 / 침묵 회랑
+        CHAPTER {String((run.chapter ?? 0) + 1).padStart(2, '0')} / {CHAPTERS[run.chapter ?? 0].name}
         <small>{stage === STAGES - 1 ? 'BOSS' : `STAGE ${String(stage + 1).padStart(2, '0')}`} · DEPTH {depthLabel(run.depth)}</small>
       </div>
       <div className="stat"><Icon name="heart" size={15} /> HP <span className="bar"><i style={{ width: `${(run.hp / run.maxHp) * 100}%` }} /></span><b>{run.hp}/{run.maxHp}</b></div>

@@ -249,11 +249,11 @@ function summonClone(s: CombatState, ev: FxEvent[]) {
 }
 
 // ─── 적 의도 ───────────────────────────────────────────
-function dmgMult(depth: number) {
-  return 1 + (depthDef(depth).mult - 1) * 0.6;
+function dmgMult(depth: number, chapter = 0) {
+  return (1 + (depthDef(depth).mult - 1) * 0.6) * (1 + 0.06 * chapter);
 }
-function scaleIntent(it: Intent, depth: number): Intent {
-  const m = dmgMult(depth);
+function scaleIntent(it: Intent, depth: number, chapter = 0): Intent {
+  const m = dmgMult(depth, chapter);
   const out = { ...it };
   if (out.dmg) out.dmg = Math.round(out.dmg * m);
   if (out.block) out.block = Math.round(out.block * m);
@@ -283,7 +283,7 @@ function decideIntent(s: CombatState, e: EnemyInst) {
   const def = ENEMIES[e.defId];
   let it = def.pattern(e, s);
   if (s.ctx.depth >= 1 && def.tier === 'normal' && e.turn % 3 === 0) it = { kind: 'echo', label: '반향' };
-  e.intent = scaleIntent(it, s.ctx.depth);
+  e.intent = scaleIntent(it, s.ctx.depth, s.ctx.chapter);
 }
 
 /** 화면 표시용: 반향 의도는 지금 마지막으로 낸 카드에 따라 실시간으로 바뀐다 */
@@ -300,7 +300,7 @@ export function displayIntent(s: CombatState, e: EnemyInst): Intent {
 
 // ─── 전투 시작 ─────────────────────────────────────────
 export function makeCtx(run: RunState, meta: string[]): Ctx {
-  return { relics: activeRelics(run), meta, depth: run.depth, squad: run.squad };
+  return { relics: activeRelics(run), meta, depth: run.depth, squad: run.squad, chapter: run.chapter ?? 0 };
 }
 
 export function startCombat(run: RunState, encounter: string[], kind: CombatState['kind'], meta: string[], archive: ArchiveEntry[]): Step {
@@ -310,7 +310,7 @@ export function startCombat(run: RunState, encounter: string[], kind: CombatStat
   const t = tierOf(run.erosion, meta);
   const blanks = t >= 2 ? 2 : t >= 1 ? 1 : 0;
   for (let i = 0; i < blanks; i++) deck.push({ uid: ++uid, id: 'blank', temp: true });
-  const hpMult = depthDef(run.depth).mult;
+  const hpMult = depthDef(run.depth).mult * (1 + 0.12 * (run.chapter ?? 0));
 
   let scanned: string[] = [];
   let archLabel: string | undefined;
@@ -335,7 +335,7 @@ export function startCombat(run: RunState, encounter: string[], kind: CombatStat
   const enemies: EnemyInst[] = encounter.map((id) => {
     const d = ENEMIES[id];
     let hp = Math.round(rint(d.hp[0], d.hp[1]) * hpMult);
-    if (id === 'ark') hp = Math.round(hp * (1 + 0.05 * Math.floor(run.erosion / 10)));
+    if (id === 'ark') hp = Math.round(rint(d.hp[0], d.hp[1]) * depthDef(run.depth).mult * (1 + 0.05 * Math.floor(run.erosion / 10)));
     return { uid: ++uid, defId: id, name: d.name, hp, maxHp: hp, block: 0, str: 0, weak: 0, vuln: 0, intent: { kind: 'attack', label: '' }, mimicked: false, turn: 0 };
   });
 

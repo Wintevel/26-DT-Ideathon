@@ -4,7 +4,7 @@ import { ENEMIES } from '../game/data';
 import { startCombat } from '../game/engine';
 import { clearSave, emptySave, loadSave, record, refundAll, writeSave } from '../game/meta';
 import {
-  absorb, addCard, applyCombatResult, makeReward, newRun, nodeById, priceOf, removeCard, resolveEvent, settle, shopStock, topPlayed,
+  absorb, addCard, applyCombatResult, isFinalChapter, makeReward, newRun, nextChapter, nodeById, priceOf, removeCard, resolveEvent, settle, shopStock, topPlayed,
   type Reward, type Settlement,
 } from '../game/run';
 import type { CombatState, FxEvent, MetaSave, RunState } from '../game/types';
@@ -18,11 +18,11 @@ import { CursorPing, GridDrop, KeywordTip, MapMenu } from './Overlays';
 import { RelicDrawer } from './RelicGrid';
 import { activeRelics } from '../game/relicGrid';
 import { clearRun, loadRun, saveRun } from './runSave';
-import { DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
+import { ChapterView, DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
 
 export type Outcome = 'win' | 'lose' | 'eroded' | 'abort';
-type Screen = 'tutorial' | 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
+type Screen = 'tutorial' | 'chapter' | 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
 
 export function App() {
   const [meta, setMetaRaw] = useState<MetaSave>(() => loadSave());
@@ -66,7 +66,7 @@ export function App() {
     setMeta(m);
     setCodexNew(0);
     setRun(r);
-    setScreen('map');
+    setScreen('chapter');
   };
 
   const enterNode = (id: string) => {
@@ -76,7 +76,7 @@ export function App() {
     const r: RunState = { ...run, pos: id, visited: [...run.visited, id] };
     setRun(r);
     if (n.type === 'combat' || n.type === 'elite' || n.type === 'boss') {
-      const kind = n.type === 'elite' ? 'elite' : n.type === 'boss' ? 'boss' : 'normal';
+      const kind = n.type === 'elite' ? 'elite' : n.type === 'boss' ? (isFinalChapter(r) ? 'boss' : 'midboss') : 'normal';
       const st = startCombat(r, n.encounter!, kind, meta.unlocked, meta.archive);
       setMeta(rec(meta, 'enemiesSeen', n.encounter!).save);
       setCombat({ s: st.state, ev: st.events, key: Date.now() });
@@ -145,6 +145,7 @@ export function App() {
     setMeta(m);
     if (cs.over === 'lose' || cs.over === 'eroded') return finish(r, cs.over);
     if (cs.kind === 'elite') r.stats.elites += 1;
+    if (cs.kind === 'midboss') { r.stats.midBosses = (r.stats.midBosses ?? 0) + 1; r.stats.nodesCleared += 1; }
     if (cs.kind === 'boss') {
       r.stats.bossKilled = true;
       r.stats.nodesCleared += 1;
@@ -162,7 +163,7 @@ export function App() {
       setMeta(rec(m, 'relics', [rw.relic]).save);
     }
     setRun(r);
-    setReward(rw);
+    setReward(cs.kind === 'midboss' ? { ...rw, chapterClear: true } : rw);
     setScreen('reward');
   };
 
@@ -175,6 +176,7 @@ export function App() {
     if (ids.length) setMeta(rec(meta, 'cards', ids).save);
     if (r.erosion >= 100) return finish(r, 'eroded');
     if (reward?.boss) return finish(r, 'win');
+    if (reward?.chapterClear) { setRun(nextChapter(r)); setScreen('chapter'); return; }
     clearNode(r);
   };
 
@@ -263,6 +265,7 @@ export function App() {
       )}
       {screen === 'depth' && <DepthSelect depth={depth} setDepth={setDepth} onBack={T(() => setScreen('hub'))} onNext={T(() => setScreen('squad'))} />}
       {screen === 'squad' && <SquadSelect depth={depth} onBack={T(() => setScreen('depth'))} onLaunch={T(launch)} />}
+      {screen === 'chapter' && run && <ChapterView run={run} onContinue={T(() => setScreen('map'))} />}
       {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={T(enterNode)} onDeck={() => setModal('deck')} onRelics={() => setModal('relic')} />}
       {screen === 'tutorial' && tutIntro && (
         <div className="screen tut-intro">
@@ -283,7 +286,7 @@ export function App() {
         key={combat.key}
         hud={{
           kakpul: run.kakpul, mirrorCharges: run.mirrorCharges, deckSize: run.deck.length, relicsOn: activeRelics(run).length, relics: run.relics.length,
-          where: `${run.pos && nodeById(run, run.pos).type === 'boss' ? 'BOSS' : `STAGE ${String((run.pos ? nodeById(run, run.pos).stage : 0) + 1).padStart(2, '0')}`} · DEPTH ${depthLabel(run.depth)}`,
+          where: `${run.pos && nodeById(run, run.pos).type === 'boss' ? 'BOSS' : `CH ${(run.chapter ?? 0) + 1} · STAGE ${String((run.pos ? nodeById(run, run.pos).stage : 0) + 1).padStart(2, '0')}`} · DEPTH ${depthLabel(run.depth)}`,
         }}
         onDeck={() => setModal('deck')}
         onRelics={() => setModal('relic')}

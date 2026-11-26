@@ -52,7 +52,7 @@ export const RELIC_LIST = relicList;
 export interface EnemyDef {
   id: string;
   name: string;
-  tier: 'normal' | 'elite' | 'boss' | 'minion';
+  tier: 'normal' | 'elite' | 'midboss' | 'boss' | 'minion';
   hp: [number, number];
   desc: string;
   pattern: (e: EnemyInst, s: CombatState) => Intent;
@@ -94,8 +94,19 @@ const enemyList: EnemyDef[] = [
     pattern: () => ({ kind: 'attack', label: '파편', dmg: 5 }),
   },
   {
+    id: 'veiled', name: '천을 쓴 원형', tier: 'midboss', hp: [84, 88],
+    desc: '머리에 천을 뒤집어쓴 또 하나의 당신. 얼굴이 가려져 있어 무엇을 베꼈는지 알 수 없다. 당신의 마지막 카드를 반향하고, 장막 뒤에서 힘을 모은다.',
+    pattern: (e) => {
+      const p = (e.turn - 1) % 4;
+      if (p === 0) return { kind: 'attack', label: '덮어쓰기', dmg: 6, hits: 2 };
+      if (p === 1) return { kind: 'echo', label: '천 아래의 반향' };
+      if (p === 2) return { kind: 'attack', label: '장막', dmg: 5, block: 14 };
+      return { kind: 'debuff', label: '이름 지우기', dmg: 10, weak: 2 };
+    },
+  },
+  {
     id: 'ark', name: '거울 파수꾼 · 아크', tier: 'boss', hp: [120, 120],
-    desc: '당신의 런 기록을 스캔해 당신의 덱으로 싸운다. 체력이 절반이 되면 역상: 패를 봉인해 대신 사용한다.',
+    desc: '얼굴 없는 거대한 관측자. 당신의 런 기록을 스캔해 당신의 덱으로 싸운다. 체력이 절반이 되면 역상: 패를 봉인해 대신 사용한다.',
     pattern: () => ({ kind: 'attack', label: '-', dmg: 1 }), // 엔진에서 직접 처리
   },
 ];
@@ -114,17 +125,17 @@ export const ENCOUNTERS: string[][] = [
 export interface SquadDef { id: string; code: string; name: string; tag: string; desc: string; cards: string[]; relic: string; maxHp: number; kakpul: number; erosion: number; perks: string[] }
 export const SQUADS: SquadDef[] = [
   {
-    id: 'scout', code: 'PROBE-01', name: '기동 관측 탐사', tag: '관찰자 · 정밀 모사', desc: '적게, 정확하게 베낀다. 침식을 낮게 유지하며 오래 버틴다.',
+    id: 'scout', code: 'PROBE-01', name: '기동 탐사', tag: '관찰자 · 정밀 모사', desc: '적게, 정확하게 베낀다. 침식을 낮게 유지하며 오래 버틴다.',
     cards: ['mimicSlash', 'compose'], relic: 'focuser', maxHp: 75, kakpul: 45, erosion: 0,
     perks: ['시작 각뿔 +45', '시작 덱에 [모방 참격], [자아 정돈]', '소장품 [각뿔 집속기]'],
   },
   {
-    id: 'resonance', code: 'PROBE-02', name: '거울 공명 탐사', tag: '분신술사 · 침식 연료', desc: '분신이 카드를 한 번 더 시전한다. 침식을 연료 삼아 폭발한다.',
+    id: 'resonance', code: 'PROBE-02', name: '공명 탐사', tag: '분신술사 · 침식 연료', desc: '분신이 카드를 한 번 더 시전한다. 침식을 연료 삼아 폭발한다.',
     cards: ['afterimage', 'twin'], relic: 'capacitor', maxHp: 75, kakpul: 0, erosion: 20,
     perks: ['시작 덱에 [잔상 복제], [쌍둥이 베기]', '소장품 [거울 축전기]', '초기 침식 +20%'],
   },
   {
-    id: 'bulwark', code: 'PROBE-03', name: '중장 대칭 탐사', tag: '거울 방패 · 반사', desc: '적의 행동을 그대로 되돌려준다. 침식을 묶어 두고 버틴다.',
+    id: 'bulwark', code: 'PROBE-03', name: '중장 탐사', tag: '거울 방패 · 반사', desc: '적의 행동을 그대로 되돌려준다. 침식을 묶어 두고 버틴다.',
     cards: ['symmetry', 'anchor'], relic: 'plate', maxHp: 92, kakpul: 0, erosion: 0,
     perks: ['최대 체력 92', '시작 덱에 [대칭 반격], [원형의 닻]', '소장품 [전술 방탄판]'],
   },
@@ -209,3 +220,11 @@ export const EVENTS: EventDef[] = [
   },
 ];
 export const EVENT_MAP: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
+
+// ─── 챕터 ──────────────────────────────────────────────
+export interface ChapterDef { no: number; name: string; en: string; boss: string }
+export const CHAPTERS: ChapterDef[] = [
+  { no: 1, name: '외곽 격벽', en: 'OUTER BULKHEAD', boss: 'veiled' },
+  { no: 2, name: '침묵 회랑', en: 'SILENT CORRIDOR', boss: 'veiled' },
+  { no: 3, name: '거울 심층', en: 'MIRROR CORE', boss: 'ark' },
+];
