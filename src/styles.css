@@ -1496,3 +1496,12 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .combat > .depth-scene { opacity: .8; }
 /* 전투 중앙 원: 검은 그라데이션 */
 .combat .axis [data-fx="emblem"] { background: radial-gradient(circle at 50% 38%, #3a3a37 0%, #151514 42%, #030303 72%) !important; box-shadow: 0 0 0 1px rgba(242,242,238,.12), 0 10px 30px rgba(0,0,0,.7); }
+/* 턴 종료: 기본 엠블럼에서 별이 노랗게 켜지고 고리가 빨라진다 */
+.emblem.turn-ready .em-star { fill: var(--turn); filter: drop-shadow(0 0 6px rgba(255,243,166,.8)); animation: starGlow 1.6s ease-in-out infinite; }
+.emblem.turn-ready .spin { animation-duration: 8s; stroke: var(--turn); }
+.emblem.turn-ready .spin-r { animation-duration: 6s; }
+@keyframes starGlow { 50% { filter: drop-shadow(0 0 14px rgba(255,243,166,1)); } }
+.sunend .sun-wave-c { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%; border: 1px solid var(--turn); animation: sunwave 2s ease-out infinite; pointer-events: none; }
+.sunend .sun-wave-c.w2 { animation-delay: 1s; }
+.sunend:hover .emblem.turn-ready { transform: scale(1.06); }
+.sunend .emblem { transition: transform .2s; }

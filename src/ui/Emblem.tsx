@@ -11,7 +11,7 @@ function Shape() {
         <circle cx="76" cy="100" r="26" strokeWidth="5" />
         <circle cx="124" cy="100" r="26" strokeWidth="5" />
       </g>
-      <path d="M100 52 L108 92 L148 100 L108 108 L100 148 L92 108 L52 100 L92 92 Z" fill="currentColor" stroke="none" />
+      <path className="em-star" d="M100 52 L108 92 L148 100 L108 108 L100 148 L92 108 L52 100 L92 92 Z" fill="currentColor" stroke="none" />
       <path d="M100 70 L104 96 L130 100 L104 104 L100 130 L96 104 L70 100 L96 96 Z" fill="var(--bg)" stroke="none" />
       <line x1="100" y1="2" x2="100" y2="34" strokeWidth="10" />
       <line x1="100" y1="166" x2="100" y2="198" strokeWidth="10" />
