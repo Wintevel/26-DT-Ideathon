@@ -1505,3 +1505,22 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .sunend .sun-wave-c.w2 { animation-delay: 1s; }
 .sunend:hover .emblem.turn-ready { transform: scale(1.06); }
 .sunend .emblem { transition: transform .2s; }
+/* 맵: 갈 수 있는 노드 강조를 커지는 사각 파동 대신 제자리 모서리 표시로, 민트 제거 */
+.map svg.links path.live { stroke: var(--fg); }
+.node.reach { border-color: var(--fg); }
+.node.reach::before, .node.reach::after { inset: -7px; border: none; transform: none; opacity: 1;
+  background:
+    linear-gradient(var(--fg), var(--fg)) left top / 10px 1.5px, linear-gradient(var(--fg), var(--fg)) left top / 1.5px 10px,
+    linear-gradient(var(--fg), var(--fg)) right top / 10px 1.5px, linear-gradient(var(--fg), var(--fg)) right top / 1.5px 10px,
+    linear-gradient(var(--fg), var(--fg)) left bottom / 10px 1.5px, linear-gradient(var(--fg), var(--fg)) left bottom / 1.5px 10px,
+    linear-gradient(var(--fg), var(--fg)) right bottom / 10px 1.5px, linear-gradient(var(--fg), var(--fg)) right bottom / 1.5px 10px;
+  background-repeat: no-repeat; animation: nodeBracket 1.6s ease-in-out infinite; }
+.node.reach::after { display: none; }
+.node.reach.wake::before { animation-delay: calc(var(--wd) + .6s); }
+@keyframes nodeBracket { 0%, 100% { opacity: .35; inset: -7px; } 50% { opacity: 1; inset: -4px; } }
+.node.elite.reach::before { background-image: linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)); }
+.node.elite.reach { border-color: var(--danger); }
+.node.elite.picked { background: var(--danger) !important; border-color: var(--danger) !important; color: #fff; }
+.node.elite.picked .ty, .node.elite.picked .go { color: #fff; }
+.node.elite.reach:hover { background: var(--danger); color: #fff; }
+.node.elite.reach:hover .ty, .node.elite.reach:hover .go { color: #fff; }
