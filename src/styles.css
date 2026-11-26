@@ -1519,3 +1519,8 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .node.reach.wake::before { animation-delay: calc(var(--wd) + .6s); }
 @keyframes nodeBracket { 0%, 100% { opacity: .35; inset: -7px; } 50% { opacity: 1; inset: -4px; } }
 .node.elite.reach::before { background-image: linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)), linear-gradient(var(--danger), var(--danger)); }
+.node.elite.reach { border-color: var(--danger); }
+.node.elite.picked { background: var(--danger) !important; border-color: var(--danger) !important; color: #fff; }
+.node.elite.picked .ty, .node.elite.picked .go { color: #fff; }
+.node.elite.reach:hover { background: var(--danger); color: #fff; }
+.node.elite.reach:hover .ty, .node.elite.reach:hover .go { color: #fff; }
