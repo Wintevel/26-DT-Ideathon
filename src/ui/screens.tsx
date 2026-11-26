@@ -10,6 +10,7 @@ import { DEPTH_ICON, Icon, SQUAD_ICON } from './Icons';
 import { Portrait } from './Portraits';
 import { Rich } from './Rich';
 import { activeRelics, occupied } from '../game/relicGrid';
+import { playSound } from './audio';
 
 // ─── 허브 ──────────────────────────────────────────────
 /** 오프닝은 페이지를 처음 열었을 때 한 번만 재생한다 */
@@ -32,6 +33,7 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onTutorial, onRes
   const start = () => {
     if (launching) return;
     setLaunching(true);
+    playSound('launch');
     setTimeout(onStart, 900);
   };
   return (
@@ -99,6 +101,12 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
   const layerTop = (i: number) => TY + i * TH;
   const idx = DEPTHS.findIndex((x) => x.lv === depth);
   const probeY = layerTop(idx) + TD / 2 + TH / 2;
+  // 탐침이 한 층 움직일 때마다 딸깍 — 깊을수록 낮은 음
+  const firstDepth = useRef(true);
+  useEffect(() => {
+    if (firstDepth.current) { firstDepth.current = false; return; }
+    playSound('tick', 0, 1.25 - idx * .09);
+  }, [idx]);
   const pick = (clientY: number) => {
     const el = svg.current;
     if (!el) return;
@@ -258,7 +266,7 @@ export function SquadSelect({ depth, onBack, onLaunch }: { depth: number; onBack
             const open = squad === s.id;
             return (
               <div key={s.id} className={`sq ${open ? 'open' : ''} ${squad && !open ? 'dim' : ''}`}>
-                <button className="sq-face" onClick={() => setSquad(open ? null : s.id)}>
+                <button className="sq-face" onClick={() => { playSound(open ? 'close' : 'open'); setSquad(open ? null : s.id); }}>
                   <span className="code">{s.code}</span>
                   <div className="sq-pt"><Portrait kind={s.id} size={150} /></div>
                   <h4>{s.name}</h4>
@@ -323,6 +331,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
   const reach = reachable(run);
   const choose = (id: string) => {
     if (reach.length < 2) return onEnter(id);
+    playSound(picked === id ? 'close' : 'node');
     setPicked(picked === id ? null : id);
   };
   const pk = picked ? nodeById(run, picked) : null;
@@ -467,6 +476,12 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
 // ─── 보상 ──────────────────────────────────────────────
 /** 카드가 가운데 한 점에서 부채꼴로 촤락 펼쳐지며 나온다 */
 function DealRow({ ids, picked, onPick, delay, sub }: { ids: string[]; picked: string | null; onPick: (id: string) => void; delay: number; sub?: (id: string) => string }) {
+  // 카드가 한 장씩 날아와 놓이는 타이밍(dealIn 애니메이션)에 맞춰 촤락 소리
+  useEffect(() => {
+    const t = setTimeout(() => ids.forEach((_, k) => playSound('deal', k * .13, 1 + k * .06)), delay * 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <div className="deal">
       {ids.map((id, k) => {
@@ -477,7 +492,7 @@ function DealRow({ ids, picked, onPick, delay, sub }: { ids: string[]; picked: s
             className={`deal-card ${picked === id ? 'picked' : picked ? 'faded' : ''}`}
             style={{ ['--dx' as string]: `${-off * 150}px`, ['--rot' as string]: `${off * 14}deg`, animationDelay: `${delay + k * 0.13}s` }}
           >
-            <CardView id={id} onClick={() => onPick(id)} />
+            <CardView id={id} onClick={() => { playSound('select'); onPick(id); }} />
             {sub && <small>{sub(id)}</small>}
           </div>
         );
@@ -675,6 +690,12 @@ export function ChapterView({ run, onContinue }: { run: RunState; onContinue: ()
     return () => { clearTimeout(t); window.removeEventListener('keydown', k); };
   }, [onContinue]);
   const bossId = CHAPTERS[cur].boss;
+  // 챕터 마름모(.15s + k·.18s)와 경로 노드(.8s + k·.08s)가 나타나는 순서에 맞춘 소리
+  useEffect(() => {
+    CHAPTERS.forEach((_, k) => playSound('chStep', .15 + k * .18, k <= cur ? 1 + k * .26 : .75));
+    run.map.forEach((_, k) => playSound('chNode', .8 + k * .08, 1 + k * .05));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <div className="screen chapter-screen" onClick={onContinue}>
       <DepthScene depth={run.depth} className="dim" />

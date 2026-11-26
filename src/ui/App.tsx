@@ -20,7 +20,7 @@ import { activeRelics } from '../game/relicGrid';
 import { clearRun, loadRun, saveRun } from './runSave';
 import { ChapterView, DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
-import { activateAudio, playSound, readSoundEnabled, setAudioVisible, setMusic, setSoundEnabled } from './audio';
+import { activateAudio, playSound, queueTap, readSoundEnabled, setAudioVisible, setMusic, setSoundEnabled } from './audio';
 
 export type Outcome = 'win' | 'lose' | 'eroded' | 'abort';
 type Screen = 'tutorial' | 'chapter' | 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
@@ -219,11 +219,19 @@ export function App() {
     if (res.run.erosion >= 100) setTimeout(T(() => finish(res.run, 'eroded')), 1200);
   };
 
+  const rest = T((o: 'heal' | 'compose') => {
+    if (!run) return;
+    const r = structuredClone(run);
+    if (o === 'heal') r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.3));
+    else r.erosion = Math.max(0, r.erosion - 15);
+    clearNode(r);
+  });
   const shopBuy = (i: number) => {
     if (!run) return;
     const it = stock[i];
     const p = priceOf(it.price, meta.unlocked);
     if (it.sold || run.kakpul < p) return;
+    playSound('buy');
     let r = addCard(run, it.id);
     r.kakpul -= p;
     setRun(r);
@@ -234,6 +242,7 @@ export function App() {
     if (!run) return;
     const cost = priceOf(k === 'remove' ? 50 : k === 'purge' ? 45 : 60, meta.unlocked);
     if (run.kakpul < cost) return;
+    playSound('buy');
     let r = k === 'remove' && uid != null ? removeCard(run, uid) : structuredClone(run);
     r.kakpul -= cost;
     if (k === 'purge') r.erosion = Math.max(0, r.erosion - 10);
@@ -255,6 +264,13 @@ export function App() {
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [screen, modal]);
+  // 덱·소장품 창과 맵 메뉴가 열리고 닫힐 때
+  const overlayOpen = !!modal || (menu && screen === 'map');
+  const overlayWas = useRef(overlayOpen);
+  useEffect(() => {
+    if (overlayOpen !== overlayWas.current) playSound(overlayOpen ? 'open' : 'close');
+    overlayWas.current = overlayOpen;
+  }, [overlayOpen]);
   const saveAndExit = T(() => { if (run) saveRun(run); setMenu(false); setRun(null); setScreen('hub'); });
   const [drop, setDrop] = useState(false);
   const abandon = () => {
@@ -288,7 +304,10 @@ export function App() {
 
   return (
     <div className="app" onClickCapture={(event) => {
-      if (event.nativeEvent.isTrusted && !(event.target instanceof Element && event.target.closest('.audio-toggle'))) activateAudio();
+      if (!event.nativeEvent.isTrusted || !(event.target instanceof Element) || event.target.closest('.audio-toggle')) return;
+      activateAudio();
+      const b = event.target.closest('button');
+      if (b && !b.disabled) queueTap();
     }}>
       {!battle && soundControl}
       {inRun && run && screen !== 'combat' && (
@@ -357,12 +376,7 @@ export function App() {
       {screen === 'rest' && run && (
         <RestView
           run={run}
-          onRest={T((o: 'heal' | 'compose') => {
-            const r = structuredClone(run);
-            if (o === 'heal') r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.3));
-            else r.erosion = Math.max(0, r.erosion - 15);
-            clearNode(r);
-          })}
+          onRest={(o: 'heal' | 'compose') => { playSound(o); rest(o); }}
         />
       )}
       {screen === 'shop' && run && <ShopView run={run} meta={meta.unlocked} stock={stock} onBuy={shopBuy} onService={shopService} onLeave={T(() => clearNode(run))} />}
@@ -371,7 +385,7 @@ export function App() {
         <TreeView
           meta={meta}
           onBack={T(() => setScreen('hub'))}
-          onUnlock={(id) => setMeta({ ...meta, fragments: meta.fragments - META[id].cost, unlocked: [...meta.unlocked, id] })}
+          onUnlock={(id) => { playSound('unlock'); setMeta({ ...meta, fragments: meta.fragments - META[id].cost, unlocked: [...meta.unlocked, id] }); }}
           onRefund={() => setMeta(refundAll(meta))}
         />
       )}
