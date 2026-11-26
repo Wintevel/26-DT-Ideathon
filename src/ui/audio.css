@@ -1,0 +1,30 @@
+.audio-toggle {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line2);
+  border-radius: 2px;
+  background: var(--panel);
+  color: var(--fg);
+}
+.audio-toggle[aria-pressed="false"] { color: var(--mute); }
+.audio-toggle:hover,
+.audio-toggle:focus-visible { border-color: var(--fg); color: var(--fg); }
+.combat .audio-toggle {
+  position: absolute;
+  z-index: 6;
+  inset: 14px 64px auto auto;
+  width: 38px;
+  height: 38px;
+}
+@media (max-width: 1000px) {
+  .combat .audio-toggle { inset: 74px auto auto 18px; }
+}
+/* 하단 바(맵·우위 트리): 왼쪽 아래 소리 버튼 자리를 비워 정보가 가려지지 않게 한다 */
+.mapfoot,
+.treefoot { padding-left: 72px; }
