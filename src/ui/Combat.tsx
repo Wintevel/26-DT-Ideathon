@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CARDS, depthDef, depthLabel, ENEMIES } from '../game/data';
 import {
   canMimic, canPlay, cardCost, cardErosionPreview, defOf, displayIntent, endTurn, enemyHitValue, mimic, mimicCost,
@@ -12,12 +12,19 @@ import { Emblem } from './Emblem';
 import { DepthScene } from './DepthScene';
 import { Rich } from './Rich';
 import { flash, fly, floatText, guard, lunge, pulse, shake, slash, sleep, statusFx } from './fx';
+import { playSound, setMusic } from './audio';
 
 function playFx(events: FxEvent[], s: CombatState) {
   let blockStack = 0;
+  let hitStack = 0;
+  const mirrorAction = events.some((e) => e.k === 'mimic' || e.k === 'echo' || e.k === 'seal');
   for (const e of events) {
     switch (e.k) {
       case 'dmg':
+        if ((e.amt > 0 || e.blocked > 0) && hitStack < 4) {
+          const cue = e.amt <= 0 ? 'guard' : e.to === 'player' ? 'hurt' : e.amt >= 10 ? 'heavy' : 'hit';
+          playSound(cue, hitStack++ * .065);
+        }
         if (e.amt > 0) {
           slash(e.to, e.amt >= 10, e.to === 'player');
           floatText(e.to, `-${e.amt}`, `dmgnum ${e.to === 'player' ? 'red' : ''} ${e.amt >= 10 ? 'big' : ''}`);
@@ -28,20 +35,26 @@ function playFx(events: FxEvent[], s: CombatState) {
         if (e.blocked > 0) floatText(e.to, `차폐 −${e.blocked}`, 'small blk', 26);
         break;
       case 'block':
-        if (!blockStack) guard(e.to);
+        if (!blockStack) {
+          guard(e.to);
+          playSound('guard');
+        }
         floatText(e.to, `+${e.amt} 차폐`, 'small blk', -20 - blockStack * 22);
         blockStack++;
         break;
       case 'erosion':
+        if (e.amt > 0 && !mirrorAction) playSound('erosion', .10);
         floatText('erosion', `침식 ${e.amt > 0 ? '+' : ''}${e.amt}%`, 'small ero');
         pulse('emblem');
         break;
       case 'mimic': {
+        playSound('mimic');
         const c = s.hand.find((h) => h.uid === e.cardUid);
         fly(e.from, 'hand', c ? defOf(c).name : '모사', true);
         break;
       }
       case 'echo':
+        playSound('echo');
         fly('player', e.from, `반향: ${CARDS[e.cardId]?.name ?? '모사'}`, false);
         break;
       case 'clone':
@@ -50,6 +63,7 @@ function playFx(events: FxEvent[], s: CombatState) {
         break;
       case 'seal':
         {
+          playSound('seal');
           const b = s.enemies.find((x) => x.defId === 'ark');
           fly('hand', b ? `e${b.uid}` : 'player', `봉인: ${CARDS[e.cardId]?.name}`, false);
         }
@@ -142,9 +156,9 @@ function TutCursor({ targets, hidden }: { targets: string[]; hidden: boolean }) 
 }
 
 
-export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, onDeck, onRelics, tutorial }: {
+export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, onDeck, onRelics, tutorial, soundControl }: {
   initial: CombatState; introEvents: FxEvent[]; onEnd: (s: CombatState) => void; onTick?: (v: { hp: number; erosion: number }) => void; onRetreat: () => void;
-  hud?: CombatHud; onDeck?: () => void; onRelics?: () => void; tutorial?: boolean;
+  hud?: CombatHud; onDeck?: () => void; onRelics?: () => void; tutorial?: boolean; soundControl?: ReactNode;
 }) {
   const [paused, setPaused] = useState(false);
   const [s, setS] = useState(initial);
@@ -157,6 +171,11 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
   const [hoverMimic, setHoverMimic] = useState(false);
   const [actor, setActor] = useState<string | null>(null);
   const ended = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const [tut, setTut] = useState(tutorial ? 0 : -1);
   const tutBase = useRef(initial);
   const [tutReady, setTutReady] = useState(false);
@@ -197,6 +216,8 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
   useEffect(() => {
     if (s.over && !ended.current) {
       ended.current = true;
+      setMusic(null);
+      playSound(s.over === 'win' ? 'victory' : 'defeat', .25);
       setBusy(true);
       setBanner(s.over === 'win' ? 'CLEAR' : s.over === 'eroded' ? 'REPLACED' : 'SIGNAL LOST');
       setTimeout(() => onEnd(s), 1400);
@@ -205,7 +226,9 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
 
   const apply = (step: { state: CombatState; events: FxEvent[] }) => {
     setS(step.state);
-    requestAnimationFrame(() => playFx(step.events, step.state));
+    requestAnimationFrame(() => {
+      if (mounted.current) playFx(step.events, step.state);
+    });
   };
 
   const clickCard = (uid: number) => {
@@ -214,10 +237,12 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
     const c = s.hand.find((h) => h.uid === uid)!;
     if (!canPlay(s, c)) return;
     if (needsTarget(s, c)) {
+      playSound('select');
       setSel(sel === uid ? null : uid);
       return;
     }
     const tgt = s.enemies.find((e) => e.hp > 0);
+    playSound('card');
     apply(playCard(s, uid, tgt ? tgt.uid : null));
     setSel(null);
   };
@@ -231,6 +256,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
       return;
     }
     if (sel != null) {
+      playSound('card');
       apply(playCard(s, sel, e.uid));
       setSel(null);
     }
@@ -247,6 +273,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
       const st = steps[i];
       if (st.actor && !announced) {
         announced = true;
+        playSound('phase');
         setBanner('ENEMY PHASE');
         await sleep(1100);
         setBanner(null);
@@ -311,6 +338,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
           {hud && onRelics && <button className="ch-btn" onClick={onRelics}><Icon name="relic" size={15} /> 소장품 <b>{hud.relicsOn}/{hud.relics}</b></button>}
         </div>
         <button className="pausebtn" onClick={() => setPaused(true)} title="일시 정지 (Esc)"><i /><i /></button>
+        {soundControl}
         {paused && (
           <div className="modal map-menu" onClick={() => setPaused(false)}>
             <div className="mm-box" onClick={(e) => e.stopPropagation()}>
@@ -476,7 +504,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
             data-tut="mimic"
             className={`mimicico ${mimicMode ? 'on' : ''} ${!anyMimic && !busy ? 'spent' : ''}`}
             disabled={busy || !anyMimic}
-            onClick={() => { setSel(null); setMimicMode(!mimicMode); }}
+            onClick={() => { playSound('select'); setSel(null); setMimicMode(!mimicMode); }}
             onMouseEnter={() => setHoverMimic(true)}
             onMouseLeave={() => setHoverMimic(false)}
             title="모사"

@@ -20,6 +20,7 @@ import { activeRelics } from '../game/relicGrid';
 import { clearRun, loadRun, saveRun } from './runSave';
 import { ChapterView, DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
+import { activateAudio, playSound, readSoundEnabled, setAudioVisible, setMusic, setSoundEnabled } from './audio';
 
 export type Outcome = 'win' | 'lose' | 'eroded' | 'abort';
 type Screen = 'tutorial' | 'chapter' | 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
@@ -27,6 +28,7 @@ type Screen = 'tutorial' | 'chapter' | 'hub' | 'depth' | 'squad' | 'map' | 'comb
 export function App() {
   const [meta, setMetaRaw] = useState<MetaSave>(() => loadSave());
   const [screen, setScreen] = useState<Screen>('hub');
+  const [soundEnabled, setSound] = useState(readSoundEnabled);
   const [run, setRun] = useState<RunState | null>(null);
   const [combat, setCombat] = useState<{ s: CombatState; ev: FxEvent[]; key: number } | null>(null);
   const [reward, setReward] = useState<Reward | null>(null);
@@ -102,6 +104,27 @@ export function App() {
   };
   const [tutIntro, setTutIntro] = useState(false);
 
+  const battle = screen === 'combat' || (screen === 'tutorial' && !tutIntro);
+  const kind = combat?.s.kind;
+  useEffect(() => {
+    if (battle) {
+      setMusic(kind === 'boss' || kind === 'midboss' ? 'boss' : 'combat');
+    } else if (screen === 'result') {
+      setMusic(null);
+    } else if (['chapter', 'map', 'reward', 'event', 'rest', 'shop'].includes(screen)) {
+      setMusic('explore');
+    } else {
+      setMusic('hub');
+    }
+  }, [screen, battle, kind]);
+
+  useEffect(() => {
+    const syncVisibility = () => setAudioVisible(!document.hidden);
+    syncVisibility();
+    document.addEventListener('visibilitychange', syncVisibility);
+    return () => document.removeEventListener('visibilitychange', syncVisibility);
+  }, []);
+
   const clearNode = (r: RunState) => {
     const x = structuredClone(r);
     x.stats.nodesCleared += 1;
@@ -110,6 +133,7 @@ export function App() {
   };
 
   const finish = (r0: RunState, outcome: Outcome) => {
+    if (outcome === 'eroded' && screen !== 'combat') playSound('defeat');
     clearRun();
     const r = structuredClone(r0);
     r.stats.peakErosion = Math.max(r.stats.peakErosion ?? 0, r.erosion);
@@ -172,7 +196,11 @@ export function App() {
     let r = run;
     const ids: string[] = [];
     if (card) { r = addCard(r, card); ids.push(card); }
-    if (abs) { r = absorb(r, abs); ids.push(abs); }
+    if (abs) {
+      r = absorb(r, abs);
+      ids.push(abs);
+      playSound('absorb');
+    }
     if (ids.length) setMeta(rec(meta, 'cards', ids).save);
     if (r.erosion >= 100) return finish(r, 'eroded');
     if (reward?.boss) return finish(r, 'win');
@@ -239,8 +267,30 @@ export function App() {
   };
   const resume = T(() => { const r = loadRun(); if (r) { if (!r.relicGrid) r.relicGrid = r.relics.reduce((g, id) => autoPlace(g, id), {} as NonNullable<RunState['relicGrid']>); setRun(r); setCodexNew(0); setScreen('map'); } });
 
+  const soundControl = (
+    <button
+        type="button"
+        className="audio-toggle"
+        aria-label="게임 소리"
+        aria-pressed={soundEnabled}
+        title={soundEnabled ? '게임 소리 끄기' : '게임 소리 켜기'}
+        onClick={() => {
+          setSoundEnabled(!soundEnabled);
+          setSound(!soundEnabled);
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 9h4l5-4v14l-5-4H3z" />
+          {soundEnabled ? <path d="M16 9a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12" /> : <path d="m16 10 5 5m0-5-5 5" />}
+        </svg>
+    </button>
+  );
+
   return (
-    <div className="app">
+    <div className="app" onClickCapture={(event) => {
+      if (event.nativeEvent.isTrusted && !(event.target instanceof Element && event.target.closest('.audio-toggle'))) activateAudio();
+    }}>
+      {!battle && soundControl}
       {inRun && run && screen !== 'combat' && (
         <TopBar
           run={run}
@@ -281,9 +331,10 @@ export function App() {
           </div>
         </div>
       )}
-      {screen === 'tutorial' && !tutIntro && combat && <Combat key={combat.key} tutorial initial={combat.s} introEvents={combat.ev} onEnd={T(() => { setCombat(null); setScreen('hub'); })} onRetreat={T(() => { setCombat(null); setScreen('hub'); })} />}
+      {screen === 'tutorial' && !tutIntro && combat && <Combat key={combat.key} tutorial soundControl={soundControl} initial={combat.s} introEvents={combat.ev} onEnd={T(() => { setCombat(null); setScreen('hub'); })} onRetreat={T(() => { setCombat(null); setScreen('hub'); })} />}
       {screen === 'combat' && combat && run && <Combat
         key={combat.key}
+        soundControl={soundControl}
         hud={{
           kakpul: run.kakpul, mirrorCharges: run.mirrorCharges, deckSize: run.deck.length, relicsOn: activeRelics(run).length, relics: run.relics.length,
           where: `${run.pos && nodeById(run, run.pos).type === 'boss' ? 'BOSS' : `CH ${(run.chapter ?? 0) + 1} · STAGE ${String((run.pos ? nodeById(run, run.pos).stage : 0) + 1).padStart(2, '0')}`} · DEPTH ${depthLabel(run.depth)}`,
