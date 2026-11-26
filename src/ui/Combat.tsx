@@ -91,7 +91,7 @@ const TUT: { id: string; title: string; text: string; cursor: string[]; done?: (
   { id: 'card', title: '카드 내기', text: '패에서 카드를 하나 내 보세요. 공격 카드는 누른 다음 적을 누르면 됩니다. 카드 왼쪽 위 숫자는 쓰는 행동 횟수예요.', cursor: ['.hand .card:not(:disabled)', '.enemy:not(.dead)'], done: (s, s0) => s.player.energy < s0.player.energy || s.discard.length > s0.discard.length },
   { id: 'mimic', title: '모사', text: '모사 버튼을 누르고 적을 골라 보세요. 적의 의도가 내 패로 복제되고, 그 적의 이번 행동은 25% 약해집니다.', cursor: ['[data-tut="mimic"]', '.enemy:not(.dead)'], done: (s) => s.mimicUsed },
   { id: 'erosion', title: '침식', text: '모사하면 화면 아래 보라색 침식 바가 올라갑니다. 베낄수록 강해지지만 100%가 되면 패배해요.', cursor: ['.erobar'] },
-  { id: 'end', title: '턴 종료', text: '복제한 카드도 내 보세요. 할 일을 마쳤으면 노란 턴 종료 버튼을 누릅니다. 적 단계가 끝나면 다시 내 차례예요.', cursor: ['.hand .card:not(:disabled)', '.endbtn'], done: (s) => s.turn >= 2 },
+  { id: 'end', title: '턴 종료', text: '복제한 카드도 내 보세요. 낼 수 있는 카드를 모두 쓰면 턴 종료 버튼이 노랗게 켜져요. 그때 누르면 됩니다. 적 단계가 끝나면 다시 내 차례예요.', cursor: ['.hand .card:not(:disabled)', '.endbtn'], done: (s) => s.turn >= 2 },
   { id: 'free', title: '마무리', text: '이제 직접 해 보세요. 적을 쓰러뜨리면 튜토리얼이 끝납니다.', cursor: [] },
 ];
 
@@ -276,6 +276,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
   const alive = s.enemies.filter((e) => e.hp > 0);
   const echoEnemy = s.enemies.some((e) => e.hp > 0 && e.intent.kind === 'echo');
   const selCard = s.hand.find((h) => h.uid === sel);
+  const turnDone = !busy && !s.over && !s.hand.some((c) => canPlay(s, c));
   const allDone = !busy && !s.over && !anyMimic && !s.hand.some((c) => canPlay(s, c));
 
   // 침식 구간 바
@@ -459,7 +460,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
           )}
         </div>
         <div className="actions">
-          <button className="endbtn" disabled={busy} onClick={doEnd} data-tut="end"><Icon name="launch" size={15} /> 턴 종료</button>
+          <button className={`endbtn${turnDone ? ' ready' : ''}`} disabled={!turnDone} title={turnDone ? '턴 종료' : '낼 수 있는 카드를 모두 쓰면 활성화됩니다'} onClick={doEnd} data-tut="end"><Icon name="launch" size={15} /> 턴 종료</button>
           <button
             data-tut="mimic"
             className={`mimicico ${mimicMode ? 'on' : ''} ${!anyMimic && !busy ? 'spent' : ''}`}
