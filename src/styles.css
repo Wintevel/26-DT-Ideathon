@@ -1433,3 +1433,64 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .combat .unit.boss .figure { height: 222px; }
 .combat .pedestal { width: 180px; }
 .combat .unit.boss .pedestal { width: 220px; }
+
+/* ─── v14: 장면 배경(흑백), 챕터 화면 플랫 ─── */
+.combat, .depth-amb { background: #050505; }
+.combat::before, .combat .field::before { display: none; }
+.combat::after { background: repeating-linear-gradient(180deg, rgba(255,255,255,.016) 0 1px, transparent 1px 3px); }
+.depth-amb { position: relative; isolation: isolate; }
+.depth-scene { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.depth-scene svg { width: 100%; height: 100%; display: block; }
+.depth-scene.dim { opacity: .55; }
+.depth-scene.dim::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,5,5,.2), rgba(5,5,5,.75)); }
+.ds-spin { animation: dsSpin 70s linear infinite; }
+.ds-sway { animation: dsSway 9s ease-in-out infinite alternate; transform-box: view-box; }
+.ds-sway2 { animation: dsSway 11s ease-in-out infinite alternate-reverse; transform-box: view-box; }
+.ds-steam { animation: dsSteam 7s ease-in-out infinite alternate; }
+.ds-steam.d2 { animation-duration: 9s; }
+.ds-pulse { animation: dsPulse 2.4s ease-in-out infinite; }
+.ds-float { animation: dsFloat 8s ease-in-out infinite alternate; }
+.ds-glitch { animation: dsGlitch 3s steps(5) infinite; }
+@keyframes dsSpin { to { transform: rotate(360deg); } }
+@keyframes dsSway { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
+@keyframes dsSteam { from { transform: translate(-20px, 10px); } to { transform: translate(30px, -20px); } }
+@keyframes dsPulse { 50% { opacity: .1; } }
+@keyframes dsFloat { to { transform: translateY(-14px); } }
+@keyframes dsGlitch { 0% { transform: translateY(0); } 40% { transform: translateY(-37px); } 60% { transform: translate(5px, 22px); } 100% { transform: translateY(0); } }
+.ds-dust { position: absolute; inset: -100px 0 0; pointer-events: none; opacity: .55;
+  background-image: radial-gradient(1.2px 1.2px at 12% 20%, #ddd, transparent), radial-gradient(1px 1px at 33% 60%, #bbb, transparent), radial-gradient(1.4px 1.4px at 48% 35%, #eee, transparent), radial-gradient(1px 1px at 62% 75%, #aaa, transparent), radial-gradient(1.2px 1.2px at 78% 15%, #ccc, transparent), radial-gradient(1px 1px at 90% 55%, #bbb, transparent), radial-gradient(1px 1px at 22% 85%, #999, transparent), radial-gradient(1.3px 1.3px at 55% 92%, #ccc, transparent);
+  background-size: 520px 420px; animation: dsDust 26s linear infinite; }
+.ds-dust.b { background-size: 760px 600px; opacity: .3; animation-duration: 40s; animation-direction: reverse; }
+@keyframes dsDust { from { background-position: 0 0; } to { background-position: 60px 420px; } }
+@media (prefers-reduced-motion: reduce) { .ds-spin, .ds-sway, .ds-sway2, .ds-steam, .ds-pulse, .ds-float, .ds-glitch, .ds-dust { animation: none; } }
+
+/* 챕터 진척도: 흑백, 평면, 선 */
+.chapter-screen { position: relative; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; min-height: 100vh; isolation: isolate; background: #050505; }
+.chapter-screen .ch-head { text-align: center; animation: screenIn .5s ease both; }
+.chapter-screen .ch-head .k { font-family: var(--mono); font-size: 11px; letter-spacing: .26em; color: var(--mute); }
+.chapter-screen .ch-head h2 { margin: 10px 0 0; font-family: var(--display); font-weight: 400; font-size: 64px; letter-spacing: .06em; line-height: 1; display: block; }
+.chapter-screen .ch-head h2 span { font-family: var(--display); font-size: inherit; font-weight: 400; letter-spacing: inherit; -webkit-text-stroke: 1.5px var(--fg); color: transparent; }
+.chapter-screen .ch-ko { margin-top: 10px; font-weight: 700; font-size: 18px; letter-spacing: .4em; }
+.ch-row { position: relative; display: flex; gap: 0; }
+.ch-row::before { content: ''; position: absolute; left: 110px; right: 110px; top: 46px; height: 1px; background: var(--line2); }
+.ch-step { position: relative; width: 220px; display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0; animation: chIn .45s ease forwards; animation-delay: calc(.15s + var(--k) * .15s); }
+.ch-dia { width: 66px; height: 66px; margin: 13px 0; transform: rotate(45deg); border: 1px solid var(--line2); background: #050505; display: grid; place-items: center; }
+.ch-dia b { transform: rotate(-45deg); font-family: var(--display); font-weight: 400; font-size: 28px; letter-spacing: .04em; color: var(--mute); }
+.ch-step.next .ch-dia { border-style: dashed; }
+.ch-step.done .ch-dia { border-color: var(--fg); background: repeating-linear-gradient(45deg, #050505 0 5px, rgba(242,242,238,.18) 5px 6px); }
+.ch-step.done .ch-dia b { color: var(--fg); }
+.ch-step.now .ch-dia { width: 84px; height: 84px; margin: 4px 0; border-color: var(--fg); background: var(--fg); outline: 1px solid var(--fg); outline-offset: 7px; animation: chNow 2.4s ease-in-out infinite; }
+.ch-step.now .ch-dia b { color: var(--bg); font-size: 36px; }
+@keyframes chNow { 50% { outline-offset: 12px; outline-color: rgba(242,242,238,.25); } }
+.ch-en { font-family: var(--mono); font-size: 10px; letter-spacing: .22em; color: var(--mute); }
+.ch-name { font-size: 14px; font-weight: 700; letter-spacing: .24em; color: var(--mute); }
+.ch-step.now .ch-en, .ch-step.now .ch-name, .ch-step.done .ch-name { color: var(--fg); }
+.chapter-screen .ch-track { position: relative; display: flex; align-items: center; gap: 54px; margin-top: 6px; }
+.chapter-screen .ch-track::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; transform: none; background: var(--line2); border-radius: 0; }
+.chapter-screen .ch-node { position: relative; width: 36px; height: 36px; border-radius: 0; display: grid; place-items: center; background: #050505; border: 1px solid var(--line2); color: var(--mute); opacity: 0; animation: chIn .3s ease forwards; animation-delay: calc(.7s + var(--k) * .07s); box-shadow: none; }
+.chapter-screen .ch-node.v { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.chapter-screen .ch-node.boss { width: 64px; height: 64px; border-color: var(--danger); background: #050505; box-shadow: none; overflow: hidden; }
+.chapter-screen .ch-boss { font-family: var(--mono); font-size: 11px; letter-spacing: .24em; color: var(--danger); }
+.chapter-screen .ch-hint { font-family: var(--mono); font-size: 11px; letter-spacing: .2em; color: var(--mute); animation: blink 1.6s ease-in-out infinite; }
+@media (max-width: 760px) { .ch-step { width: 110px; } .ch-row::before { left: 55px; right: 55px; } .chapter-screen .ch-track { gap: 16px; } .chapter-screen .ch-head h2 { font-size: 40px; } }
+.combat > .depth-scene { opacity: .8; }
