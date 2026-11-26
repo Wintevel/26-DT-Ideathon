@@ -1,5 +1,5 @@
 // 캐릭터·적 프로필: 좌우 대칭 문장(紋章)형 선화. 흑백 + 빗금, 위험 신호만 붉게.
-// 보스 아크는 "내 분대의 거울상"(좌우 반전 + 색 반전).
+// 중간 보스는 천을 뒤집어쓴 내 탐사, 최종 보스 아크는 얼굴 없는 관측자.
 import { useId, type ReactNode } from 'react';
 
 const FG = 'var(--fg)';
@@ -242,20 +242,58 @@ function Shard({ h }: P) {
   );
 }
 
-function Ark({ squad, h, d }: P & { squad: string }) {
+/** 중간 보스: 머리에 천을 뒤집어쓴 주인공 */
+function Veiled({ squad, h, d }: P & { squad: string }) {
   const Art = SQUAD_ART[squad] ?? Scout;
   return (
     <g>
-      <rect x="0" y="0" width="120" height="120" fill={FG} />
-      <g transform="translate(120 0) scale(-1 1)" style={{ ['--fg' as string]: '#050505', ['--bg' as string]: '#f2f2ee' }}>
-        <Art h={`url(#${d}-hi)`} d={d} />
-      </g>
-      <g className="pt-spin-slow" style={{ transformOrigin: '60px 52px' }}>
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
-          <path key={a} transform={`rotate(${a} 60 52)`} d="M60 0 L63 9 L57 9 Z" fill={BG} />
+      <Art h={h} d={d} />
+      {/* 천: 머리를 덮고 목에서 묶인 뒤 어깨 위로 퍼진다 */}
+      <path d="M38 70 C26 78 16 92 10 108 C22 104 28 110 38 104 C46 110 54 104 60 108 C66 104 74 110 82 104 C92 110 98 104 110 108 C104 92 94 78 82 70 Z" fill={`url(#${d}-cloth)`} stroke={FG} strokeWidth="1.4" />
+      <path d="M60 8 C82 8 92 24 92 42 C92 58 84 68 74 72 L46 72 C36 68 28 58 28 42 C28 24 38 8 60 8 Z" fill={`url(#${d}-cloth)`} stroke={FG} strokeWidth="1.8" />
+      <Sym>
+        <path d="M40 18 C34 32 34 52 42 68" fill="none" stroke={G1} strokeWidth=".9" />
+        <path d="M50 12 C46 30 46 52 52 70" fill="none" stroke={G2} strokeWidth="1.3" />
+        <path d="M40 74 C34 84 30 94 28 106" fill="none" stroke={G1} strokeWidth=".9" />
+        <path d="M50 74 C48 86 48 96 48 106" fill="none" stroke={G2} strokeWidth="1.2" />
+      </Sym>
+      {/* 목을 조인 끈과 늘어진 매듭 */}
+      <path d="M40 72 C50 76 70 76 80 72" fill="none" stroke={FG} strokeWidth="2.6" />
+      <path d="M62 75 L58 92 M62 75 L70 90" stroke={FG} strokeWidth="1.5" />
+      <circle cx="62" cy="75" r="2.4" fill={FG} />
+      {/* 얼굴 자리: 천 너머로 비치는 붉은 봉제선 */}
+      <path d="M60 20 V62" stroke={RED} strokeWidth="1.4" strokeDasharray="4 3" className="pt-blink" />
+      <path d="M54 26 L66 32 M54 38 L66 44 M54 50 L66 56" stroke={RED} strokeWidth="1" opacity=".75" />
+    </g>
+  );
+}
+
+/** 최종 보스 아크: 얼굴 없는 거대한 관측자. 뾰족한 각뿔 광배와 높은 깃 */
+function Ark({ d }: P & { squad: string }) {
+  const spikes = [-72, -54, -36, -18, 0, 18, 36, 54, 72];
+  return (
+    <g>
+      {/* 머리 뒤로 솟은 각뿔 왕관 */}
+      <g>
+        {spikes.map((a, i) => (
+          <path key={a} transform={`rotate(${a} 60 46)`} d={`M60 ${i % 2 ? 4 : -6} L65 30 L55 30 Z`} fill={i % 2 ? `url(#${d}-robe)` : FG} stroke={FG} strokeWidth=".7" className={i === 4 ? 'pt-blink' : undefined} />
         ))}
       </g>
-      <path d="M74 0 L66 30 L76 44 L62 70 L70 92 L64 120" fill="none" stroke={RED} strokeWidth="2" />
+      <path d="M30 46 A30 30 0 0 1 90 46" fill="none" stroke={G1} strokeWidth=".8" strokeDasharray="1 2.5" />
+      {/* 망토와 높은 깃 */}
+      <path d="M4 120 C8 96 24 84 38 80 L44 62 L60 76 L76 62 L82 80 C96 84 112 96 116 120 Z" fill={`url(#${d}-robe)`} stroke={FG} strokeWidth="1.4" />
+      <Sym>
+        <path d="M44 62 L32 44 L38 86 Z" fill={FG} />
+        <path d="M38 80 L28 120" stroke={G1} strokeWidth=".9" />
+        <path d="M50 90 L46 120" stroke={G2} strokeWidth="1.2" />
+      </Sym>
+      {/* 가슴의 역삼각 문장 */}
+      <path d="M47 90 L73 90 L60 112 Z" fill="none" stroke={FG} strokeWidth="1.4" />
+      <path d="M54 94 L66 94 L60 104 Z" fill={RED} className="pt-blink" />
+      {/* 길쭉하고 매끈한, 얼굴 없는 머리 */}
+      <path d="M60 14 C71 14 74 28 74 44 C74 60 68 72 60 78 C52 72 46 60 46 44 C46 28 49 14 60 14 Z" fill={`url(#${d}-face)`} stroke={FG} strokeWidth="1.6" />
+      <path d="M60 22 V70" stroke={RED} strokeWidth="1.2" />
+      <path d="M60 34 L56 40 M60 50 L64 56" stroke={RED} strokeWidth=".8" />
     </g>
   );
 }
@@ -264,14 +302,15 @@ const ENEMY_ART: Record<string, (p: P) => JSX.Element> = {
   patrol: Patrol, mimicer: Mimicer, watcher: Watcher, devourer: Devourer, phantom: Phantom, shard: Shard,
 };
 const ENEMY_CODE: Record<string, string> = {
-  patrol: 'CL-PTR', mimicer: 'CL-MIM', watcher: 'CL-WTC', devourer: 'CL-DVR', phantom: 'EL-PHM', shard: 'RS-SHD', ark: 'BOSS ARK',
+  patrol: 'CL-PTR', mimicer: 'CL-MIM', watcher: 'CL-WTC', devourer: 'CL-DVR', phantom: 'EL-PHM', shard: 'RS-SHD', ark: 'BOSS ARK', veiled: 'BOSS VEIL',
 };
 
-export function Portrait({ kind, squad = 'scout', size = 96 }: { kind: string; squad?: string; size?: number }) {
+export function Portrait({ kind, squad = 'scout', size = 96, bare = false }: { kind: string; squad?: string; size?: number; bare?: boolean }) {
   const d = 'pt' + useId().replace(/[^a-zA-Z0-9]/g, '');
   const h = `url(#${d}-h)`;
   let body: JSX.Element;
   if (kind === 'ark') body = <Ark squad={squad} h={h} d={d} />;
+  else if (kind === 'veiled') body = <Veiled squad={squad} h={h} d={d} />;
   else if (SQUAD_ART[kind]) { const A = SQUAD_ART[kind]; body = <A h={h} d={d} />; }
   else { const A = ENEMY_ART[kind] ?? Mimicer; body = <A h={h} d={d} />; }
   return (
@@ -281,15 +320,27 @@ export function Portrait({ kind, squad = 'scout', size = 96 }: { kind: string; s
           <rect width="3" height="3" fill={BG} />
           <path d="M0 0 V3" stroke={FG} strokeWidth="1" opacity=".55" />
         </pattern>
+        <pattern id={`${d}-cloth`} width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+          <rect width="4" height="4" fill="#1a1a19" />
+          <path d="M0 0 V4" stroke="#8b8b86" strokeWidth=".7" opacity=".6" />
+        </pattern>
+        <linearGradient id={`${d}-face`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#e8e8e2" />
+          <stop offset=".55" stopColor="#8b8b86" />
+          <stop offset="1" stopColor="#2a2a28" />
+        </linearGradient>
+        <linearGradient id={`${d}-robe`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#2a2a28" />
+          <stop offset="1" stopColor="#050505" />
+        </linearGradient>
         <pattern id={`${d}-hi`} width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="3" height="3" fill="#f2f2ee" />
           <path d="M0 0 V3" stroke="#050505" strokeWidth="1" opacity=".55" />
         </pattern>
       </defs>
-      {kind !== 'ark' && <Frame />}
+      {!bare && <Frame />}
       {body}
-      {kind === 'ark' && <Frame />}
-      <Label code={SQUAD_CODE[kind] ?? ENEMY_CODE[kind] ?? ''} />
+      {!bare && <Label code={SQUAD_CODE[kind] ?? ENEMY_CODE[kind] ?? ''} />}
     </svg>
   );
 }

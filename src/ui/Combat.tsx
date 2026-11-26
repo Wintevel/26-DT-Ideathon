@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CARDS, ENEMIES } from '../game/data';
+import { CARDS, depthDef, depthLabel, ENEMIES } from '../game/data';
 import {
   canMimic, canPlay, cardCost, cardErosionPreview, defOf, displayIntent, endTurn, enemyHitValue, mimic, mimicCost,
   mimicPreview, needsTarget, playCard, summarize, tierBounds, tierOf, TIER_NAMES,
@@ -168,7 +168,8 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
   const tutMax = useRef(0);
   const tutGo = (v: number) => { tutBase.current = s; setTutReady(false); tutMax.current = Math.max(tutMax.current, v); setTut(v >= TUT.length ? -1 : Math.max(0, v)); };
   const isBoss = s.kind === 'boss';
-  const isElite = s.kind === 'elite';
+  const isElite = s.kind === 'elite' || s.kind === 'midboss';
+  const isMid = s.kind === 'midboss';
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.modal.drawer, .modal .box, .deckview')) setPaused((v) => !v); };
     window.addEventListener('keydown', k);
@@ -294,8 +295,9 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
   });
 
   return (
-    <div className="combat" data-tutstep={tutStep?.id}>
+    <div className="combat" data-tutstep={tutStep?.id} data-depth={s.ctx.depth} data-kind={s.kind}>
       <div className="field">
+        <div className="depth-tag">DEPTH {depthLabel(s.ctx.depth)} · {depthDef(s.ctx.depth).name}</div>
         <div className="turnno">T{String(s.turn).padStart(2, '0')}</div>
         <div className="chud">
           {hud && <div className="ch-where">{hud.where}</div>}
@@ -338,7 +340,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
           </div>
           <div className="unit player" data-fx="player">
             {s.player.block > 0 && <span className="blk">{s.player.block}</span>}
-            <div className="pt-frame"><Portrait kind={s.ctx.squad} size={92} /></div>
+            <div className="figure"><Portrait kind={s.ctx.squad} size={170} bare /><i className="pedestal" /></div>
             <div className="nm">본체</div>
             <div className="sub">상태: {TIER_NAMES[tier]}</div>
             <div className="hp"><i style={{ width: `${(s.player.hp / s.player.maxHp) * 100}%` }} /></div>
@@ -377,7 +379,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
             return (
               <div
                 key={e.uid}
-                className={`unit enemy ${def.tier === 'boss' ? 'boss' : ''} ${targetable ? 'target' : ''} ${mimicable ? 'mimicsel' : ''} ${e.hp <= 0 ? 'dead' : ''} ${actor === `e${e.uid}` ? 'acting' : ''}`}
+                className={`unit enemy ${def.tier === 'boss' || def.tier === 'midboss' ? 'boss' : ''} ${targetable ? 'target' : ''} ${mimicable ? 'mimicsel' : ''} ${e.hp <= 0 ? 'dead' : ''} ${actor === `e${e.uid}` ? 'acting' : ''}`}
                 data-fx={`e${e.uid}`}
                 onClick={() => clickEnemy(e)}
               >
@@ -387,9 +389,9 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
                   <span>{it.label}</span>
                   <span className="v"><IntentBits s={s} e={e} it={it} /></span>
                 </div>
-                <div className="pt-frame"><Portrait kind={e.defId} squad={s.ctx.squad} size={92} /></div>
+                <div className="figure"><Portrait kind={e.defId} squad={s.ctx.squad} size={def.tier === 'boss' || def.tier === 'midboss' ? 210 : def.tier === 'minion' ? 120 : 170} bare /><i className="pedestal" /></div>
                 <div className="nm">{e.name}</div>
-                <div className="sub">{e.mimicked ? '모사됨 · 위력 감소' : def.tier === 'elite' ? '정예 복제체' : def.tier === 'boss' ? '구역 보스' : '복제체'}</div>
+                <div className="sub">{e.mimicked ? '모사됨 · 위력 감소' : def.tier === 'elite' ? '정예 복제체' : def.tier === 'boss' ? '최종 보스' : def.tier === 'midboss' ? '구역 보스' : '복제체'}</div>
                 <div className="hp"><i style={{ width: `${(e.hp / e.maxHp) * 100}%` }} /></div>
                 <div className="nums"><span>HP</span><span>{e.hp}/{e.maxHp}</span></div>
                 <div className="buffs">
@@ -406,7 +408,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
           <div className={`scan ${isBoss ? 'boss' : isElite ? 'elite' : ''}`}>
             <div className="line" />
             <div className="msg">
-              <b>{isBoss ? 'SCANNING YOU' : isElite ? '⚠ EMERGENCY' : 'SCANNING'}</b>
+              <b>{isBoss ? 'SCANNING YOU' : isMid ? '⚠ SECTOR BOSS' : isElite ? '⚠ EMERGENCY' : 'SCANNING'}</b>
               {isBoss ? (
                 <>
                   {s.archLabel ? `${s.archLabel}을(를) 재현한다` : '아크가 당신의 런 기록을 읽고 있다'}
@@ -418,7 +420,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
                   </ul>
                 </>
               ) : isElite ? (
-                <>긴급 작전 · 정예 복제체 접근 · 전 인원 교전 준비</>
+                isMid ? <>천을 쓴 신호 접근 · 당신과 같은 형태</> : <>긴급 작전 · 정예 복제체 접근 · 전 인원 교전 준비</>
               ) : (
                 <>복제체 신호 {alive.length}개 감지 · 의도 해독 중</>
               )}

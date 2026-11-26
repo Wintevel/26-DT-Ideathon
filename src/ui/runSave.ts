@@ -7,7 +7,7 @@ export function saveRun(r: RunState) {
   try { localStorage.setItem(KEY, JSON.stringify(r)); } catch { /* 저장 불가 환경 */ }
 }
 export function loadRun(): RunState | null {
-  try { const s = localStorage.getItem(KEY); return s ? (JSON.parse(s) as RunState) : null; } catch { return null; }
+  try { const s = localStorage.getItem(KEY); const r = s ? (JSON.parse(s) as RunState) : null; return r && r.chapter !== undefined ? r : null; /* 챕터 도입 전 저장은 버린다 */ } catch { return null; }
 }
 export function clearRun() {
   try { localStorage.removeItem(KEY); } catch { /* 무시 */ }

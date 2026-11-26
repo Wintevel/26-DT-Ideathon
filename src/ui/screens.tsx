@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CARDS, DEPTHS, depthDef, depthLabel, ENEMIES, EVENT_MAP, MAX_DEPTH, MIN_DEPTH, RELICS, SQUADS, type DepthDef } from '../game/data';
+import { CARDS, CHAPTERS, DEPTHS, depthDef, depthLabel, ENEMIES, EVENT_MAP, MAX_DEPTH, MIN_DEPTH, RELICS, SQUADS, type DepthDef } from '../game/data';
 import { erosionGain, tierOf, TIER_NAMES } from '../game/engine';
-import { currentStage, nodeById, priceOf, reachable, STAGES, type Reward, type Settlement } from '../game/run';
+import { currentStage, nodeById, priceOf, reachable, STAGES, CHAPTER_COUNT, type Reward, type Settlement } from '../game/run';
 import type { CardInst, MapNode, MetaSave, RunState } from '../game/types';
 import { CardView, DeckModal } from './common';
 import { Emblem } from './Emblem';
@@ -277,7 +277,7 @@ export function SquadSelect({ depth, onBack, onLaunch }: { depth: number; onBack
                     <div className="sq-cards">{s.cards.map((c) => <CardView key={c} id={c} mini />)}</div>
                     <div className="sq-sec">시작 소장품</div>
                     <div className="sq-relic"><Icon name="relic" size={18} /><div><b>{RELICS[s.relic].name}</b><div className="mute"><Rich text={RELICS[s.relic].text} /></div></div></div>
-                    <button className="btn solid icon-btn" tabIndex={open ? 0 : -1} onClick={() => onLaunch(s.id)}><Icon name="launch" size={16} /> 이 분대로 출격</button>
+                    <button className="btn solid icon-btn" tabIndex={open ? 0 : -1} onClick={() => onLaunch(s.id)}><Icon name="launch" size={16} /> 이 탐사로 출격</button>
                   </div>
                 </div>
               </div>
@@ -299,9 +299,10 @@ const NODE_INFO: Record<string, [string, string]> = {
   boss: ['구역 보스', '거울 파수꾼 · 아크'],
 };
 function nodeTitle(n: MapNode) {
-  if (n.type === 'combat' && n.encounter) return n.encounter.map((id) => ENEMIES[id].name).join(' + ');
+  if ((n.type === 'combat' || n.type === 'boss') && n.encounter) return n.encounter.map((id) => ENEMIES[id].name).join(' + ');
   return NODE_INFO[n.type][1];
 }
+const nodeKind = (n: MapNode) => (n.type === 'boss' && n.encounter?.[0] === 'ark' ? '최종 보스' : NODE_INFO[n.type][0]);
 function nodeDesc(n: MapNode) {
   switch (n.type) {
     case 'combat': return '일반 전투 · 카드 보상 · 모사한 적의 기술 흡수 가능';
@@ -309,7 +310,7 @@ function nodeDesc(n: MapNode) {
     case 'event': return '거울 섹터의 분기 사건 · 선택에 따라 침식이 오르내림';
     case 'rest': return '체력 회복 또는 침식 감소';
     case 'shop': return '카드 구매 · 카드 소거 · 침식 정화 · 거울 모사 충전';
-    case 'boss': return '당신의 런 기록을 스캔해 당신으로 싸우는 보스';
+    case 'boss': return n.encounter?.[0] === 'veiled' ? '천을 쓴 또 하나의 당신 · 쓰러뜨리면 다음 챕터로' : '당신의 런 기록을 스캔해 당신으로 싸우는 최종 보스';
   }
   return '';
 }
@@ -339,20 +340,21 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
     return () => clearTimeout(t);
   }, [run.pos]);
 
-  const X = (stage: number) => 8 + stage * 16.8;
-  const Y = (y: number) => 12 + y * 82;
+  const ch = CHAPTERS[run.chapter ?? 0];
+  const X = (stage: number) => 8 + stage * (84 / (STAGES - 1));
+  const Y = (y: number) => 12 + y * 74;
   const hidden = (n: MapNode) => !run.revealAll && n.stage > cur + 1 && n.type !== 'boss';
   const all = run.map.flat();
   const focus = sel ? nodeById(run, sel) : reach.length ? nodeById(run, reach[0]) : null;
   const curNode = run.pos ? nodeById(run, run.pos) : null;
 
   return (
-    <div className="screen" style={{ minHeight: 'auto', flex: 1 }}>
+    <div className="screen depth-amb" data-depth={run.depth} style={{ minHeight: 'auto', flex: 1 }}>
       <div className="map-wrap">
         <div className="map-head">
           <div>
-            <div className="k">SECTOR 01 · 제1구역 · DEPTH {depthLabel(run.depth)} {depthDef(run.depth).name}</div>
-            <h2>침묵 회랑 — 다음 통로 선택</h2>
+            <div className="k">CHAPTER {String(ch.no).padStart(2, '0')} · {ch.en} · DEPTH {depthLabel(run.depth)} {depthDef(run.depth).name}</div>
+            <h2>{ch.name} — 다음 통로 선택</h2>
           </div>
           {run.revealAll && <div className="k">안테나 신호: 전 구역 개방</div>}
         </div>
@@ -402,7 +404,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
                     <><div className="ty"><span>미확인 구역</span><Icon name="unknown" size={15} /></div><b>[ ? 신호 미감지 ]</b></>
                   ) : (
                     <>
-                      <div className="ty"><span>{NODE_INFO[n.type][0]}</span><Icon name={n.type} size={15} /></div>
+                      <div className="ty"><span>{nodeKind(n)}</span><Icon name={n.type} size={15} /></div>
                       <b>{nodeTitle(n)}</b>
                       <div className="go">{isCur ? '현재 위치' : picked === n.id ? '선택됨' : isReach ? (reach.length > 1 ? '눌러서 검토' : '진입 가능 →') : past ? '돌파' : ''}</div>
                     </>
@@ -420,7 +422,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
             <button className="btn ghost" onClick={() => setPicked(null)}>닫기</button>
           </div>
           <div className="rp-ico"><Icon name={pk.type} size={40} stroke={1.3} /></div>
-          <div className="mono" style={{ fontSize: 12, color: 'var(--mute)' }}>{NODE_INFO[pk.type][0]}</div>
+          <div className="mono" style={{ fontSize: 12, color: 'var(--mute)' }}>{nodeKind(pk)}</div>
           <h3>{nodeTitle(pk)}</h3>
           <p className="mute">{nodeDesc(pk)}</p>
           {pk.encounter && (
@@ -439,7 +441,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
           <>
             <div className="ico"><Icon name={focus.type} size={22} /></div>
             <div>
-              <div className="mono mute" style={{ fontSize: 11 }}>{NODE_INFO[focus.type][0]} · {focus.type === 'boss' ? 'BOSS' : `STAGE ${String(focus.stage + 1).padStart(2, '0')}`}</div>
+              <div className="mono mute" style={{ fontSize: 11 }}>{nodeKind(focus)} · {focus.type === 'boss' ? 'BOSS' : `STAGE ${String(focus.stage + 1).padStart(2, '0')}`}</div>
               <b>{nodeTitle(focus)}</b>
               <div className="mute" style={{ fontSize: 12 }}>{nodeDesc(focus)}</div>
             </div>
@@ -492,7 +494,7 @@ export function RewardView({ run, reward, meta, onDone }: { run: RunState; rewar
       <div className="center-wrap">
         <div className="big-title clear-rise">CLEAR</div>
         <div className="rw-body">
-          <div className="mono mute">{reward.boss ? '보스 격파 · 마지막 카드 1장을 고르면 작전 결과로 넘어갑니다' : <>구역 확보 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</>}</div>
+          <div className="mono mute">{reward.boss ? '보스 격파 · 마지막 카드 1장을 고르면 작전 결과로 넘어갑니다' : <>{reward.chapterClear ? '구역 보스 격파 · 다음 챕터로 · 체력 30% 회복 · ' : ''}구역 확보 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</>}</div>
 
           {hasAbs && (
             <section className="rw-sec abs">
@@ -511,7 +513,7 @@ export function RewardView({ run, reward, meta, onDone }: { run: RunState; rewar
           )}
 
           <div style={{ marginTop: 20 }}>
-            <button className="btn solid" onClick={() => onDone(card, abs)}>{reward.boss ? (card ? '확정하고 작전 완료 →' : '건너뛰고 작전 완료 →') : card || abs ? '확정하고 진행 →' : '건너뛰고 진행 →'}</button>
+            <button className="btn solid" onClick={() => onDone(card, abs)}>{reward.boss ? (card ? '확정하고 작전 완료 →' : '건너뛰고 작전 완료 →') : reward.chapterClear ? (card || abs ? '확정하고 다음 챕터로 →' : '건너뛰고 다음 챕터로 →') : card || abs ? '확정하고 진행 →' : '건너뛰고 진행 →'}</button>
           </div>
         </div>
       </div>
@@ -623,7 +625,7 @@ export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: 
   const plays = Object.values(st.playCounts).reduce((a, n) => a + n, 0);
   const sq = SQUADS.find((x) => x.id === run.squad);
   const cells: [string, string, string][] = [
-    ['descend', '돌파 구역', `${st.nodesCleared} / ${STAGES}`],
+    ['descend', '돌파 구역', `${st.nodesCleared} / ${STAGES * CHAPTER_COUNT}`],
     ['combat', '전투 · 정예', `${st.combats} · ${st.elites}`],
     ['recall', '진행 턴', `${st.turns ?? 0}`],
     ['deck', '사용 카드', `${plays}장`],
@@ -657,6 +659,55 @@ export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: 
         </div>
         <div style={{ marginTop: 20 }}><button className="btn solid" onClick={onHub}>허브로 →</button></div>
       </div>
+    </div>
+  );
+}
+
+// ─── 챕터 진척도 ───────────────────────────────────────
+const NODE_ICON: Record<string, string> = { combat: 'combat', elite: 'elite', event: 'event', rest: 'rest', shop: 'shop', boss: 'boss' };
+export function ChapterView({ run, onContinue }: { run: RunState; onContinue: () => void }) {
+  const cur = run.chapter ?? 0;
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') onContinue(); };
+    const t = setTimeout(() => window.addEventListener('keydown', k), 600);
+    return () => { clearTimeout(t); window.removeEventListener('keydown', k); };
+  }, [onContinue]);
+  const bossId = CHAPTERS[cur].boss;
+  return (
+    <div className={`screen chapter-screen depth-amb`} data-depth={run.depth} onClick={onContinue}>
+      <div className="ch-star" aria-hidden><Emblem size={520} /></div>
+      <div className="ch-head">
+        <div className="k">DEPTH {depthLabel(run.depth)} · {depthDef(run.depth).name}</div>
+        <h2>CHAPTER {String(cur + 1).padStart(2, '0')}<span>{CHAPTERS[cur].name}</span></h2>
+      </div>
+      <div className="ch-orbs">
+        {CHAPTERS.map((c, i) => (
+          <div key={c.no} className={`ch-orb-wrap ${i < cur ? 'done' : i === cur ? 'now' : 'next'}`} style={{ ['--k' as string]: i }}>
+            <div className="ch-lbl">{c.en}</div>
+            <div className="ch-orb">
+              <b>{c.no}</b>
+              {i < cur && <span className="ch-chk">✓</span>}
+            </div>
+            <div className="ch-name">{c.name}</div>
+            {i < CHAPTERS.length - 1 && <i className={`ch-line ${i < cur ? 'on' : ''}`} />}
+          </div>
+        ))}
+      </div>
+      <div className="ch-track">
+        {run.map.map((col, si) => {
+          const visited = col.find((n) => run.visited.includes(n.id));
+          const only = col.length === 1 ? col[0] : null;
+          const shown = visited ?? only;
+          const isBoss = shown?.type === 'boss';
+          return (
+            <div key={si} className={`ch-node ${visited ? 'v' : ''} ${isBoss ? 'boss' : ''}`} style={{ ['--k' as string]: si }}>
+              {isBoss ? <Portrait kind={bossId} squad={run.squad} size={54} /> : <Icon name={shown ? NODE_ICON[shown.type] : 'unknown'} size={18} />}
+            </div>
+          );
+        })}
+      </div>
+      <div className="ch-boss mono">BOSS · {ENEMIES[bossId].name}</div>
+      <div className="ch-hint">아무 곳이나 클릭하면 계속합니다</div>
     </div>
   );
 }

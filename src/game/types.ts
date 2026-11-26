@@ -76,13 +76,15 @@ export interface Ctx {
   meta: string[];
   depth: number;
   squad: string;
+  /** 챕터(0~2): 적 체력·공격 보정 */
+  chapter?: number;
 }
 
 export type CombatOver = null | 'win' | 'lose' | 'eroded';
 
 export interface CombatState {
   ctx: Ctx;
-  kind: 'normal' | 'elite' | 'boss';
+  kind: 'normal' | 'elite' | 'midboss' | 'boss';
   player: Fighter & { energy: number; maxEnergy: number; reflect: boolean; anchor: boolean };
   enemies: EnemyInst[];
   clones: Clone[];
@@ -156,6 +158,7 @@ export interface RunStats {
   turns?: number;
   kakpulEarned?: number;
   peakErosion?: number;
+  midBosses?: number;
 }
 
 export interface RunState {
@@ -170,6 +173,8 @@ export interface RunState {
   kakpul: number;
   erosion: number;
   mirrorCharges: number;
+  /** 챕터 0~2. 0·1은 중간 보스, 2는 아크 */
+  chapter?: number;
   map: MapNode[][];
   pos: string | null;
   visited: string[];
