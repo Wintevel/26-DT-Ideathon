@@ -25,3 +25,6 @@
 @media (max-width: 1000px) {
   .combat .audio-toggle { inset: 74px auto auto 18px; }
 }
+/* 하단 바(맵·우위 트리): 왼쪽 아래 소리 버튼 자리를 비워 정보가 가려지지 않게 한다 */
+.mapfoot,
+.treefoot { padding-left: 72px; }
