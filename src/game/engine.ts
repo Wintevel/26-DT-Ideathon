@@ -486,8 +486,8 @@ export function mimic(state: CombatState, enemyUid: number): Step {
 export function endTurn(state: CombatState): Step[] {
   let s = clone(state);
   const steps: Step[] = [];
-  const push = (ev: FxEvent[]) => {
-    steps.push({ state: clone(s), events: ev });
+  const push = (ev: FxEvent[], actor?: string) => {
+    steps.push({ state: clone(s), events: ev, actor });
   };
 
   // 1) 잔상 단계: 분신이 각인 카드를 재시전
@@ -523,7 +523,7 @@ export function endTurn(state: CombatState): Step[] {
     enemyAct(s, e, ev);
     if (e.weak > 0) e.weak -= 1;
     if (e.vuln > 0) e.vuln -= 1;
-    push(ev);
+    push(ev, `e${e.uid}`);
   }
   if (s.over) return steps;
 

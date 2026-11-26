@@ -156,6 +156,7 @@ export function resolveEvent(run: RunState, eventId: string, opt: number): { run
   const ero = (n: number) => (r.erosion = Math.max(0, Math.min(100, r.erosion + (n > 0 ? erosionGain(n, r.depth) : n))));
   switch (eventId) {
     case 'mirrorSelf':
+      if (opt === 2) { r.hp = Math.max(1, r.hp - 5); r.kakpul += 20; r.stats.kakpulEarned = (r.stats.kakpulEarned ?? 0) + 20; return { run: r, msg: '거울이 산산조각 났다. 조각 틈에 각뿔이 끼어 있었다. 손등에서 피가 흐른다.' }; }
       if (opt === 0) {
         const cands = r.deck.filter((c) => CARDS[c.id].cat !== '흡수');
         if (cands.length) {
@@ -169,6 +170,7 @@ export function resolveEvent(run: RunState, eventId: string, opt: number): { run
       return { run: r, msg: '거울을 덮었다. 손바닥 아래로 체온이 느껴진다.' };
     case 'antenna':
       if (opt === 0) { r.revealAll = true; r.kakpul += 15; r.stats.kakpulEarned = (r.stats.kakpulEarned ?? 0) + 15; return { run: r, msg: '신호가 잡혔다. 이번 구역의 모든 통로가 보인다.' }; }
+      if (opt === 2) { ero(-4); return { run: r, msg: '안테나가 조용해졌다. 머릿속 잡음도 함께 꺼졌다.' }; }
       r.kakpul += 40; r.stats.kakpulEarned = (r.stats.kakpulEarned ?? 0) + 40; ero(5);
       return { run: r, msg: '부품을 챙겼다. 잡음이 머릿속에 남는다.' };
     case 'broken':
@@ -176,6 +178,7 @@ export function resolveEvent(run: RunState, eventId: string, opt: number): { run
       return { run: r, msg: '조각들을 밟지 않게 조심히 지나갔다.' };
     case 'whisper':
       if (opt === 0) { r.mirrorCharges += 1; ero(6); return { run: r, msg: '속삭임이 조용해졌다. 대신 더 많이 베낄 수 있을 것 같다.' }; }
+      if (opt === 2) { r.kakpul += 25; r.stats.kakpulEarned = (r.stats.kakpulEarned ?? 0) + 25; ero(3); return { run: r, msg: '두 목소리가 겹쳤다. 어느 쪽이 먼저 말했는지 모르겠다. 발치에 각뿔이 떨어져 있다.' }; }
       r.hp = Math.min(r.maxHp, r.hp + 6);
       return { run: r, msg: '귀를 막고 숨을 골랐다.' };
     case 'nameless':

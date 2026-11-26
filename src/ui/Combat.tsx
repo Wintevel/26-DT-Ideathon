@@ -9,23 +9,30 @@ import { CardView } from './common';
 import { Icon } from './Icons';
 import { Portrait } from './Portraits';
 import { Emblem } from './Emblem';
-import { fly, floatText, guard, pulse, shake, slash, sleep, statusFx } from './fx';
+import { Rich } from './Rich';
+import { flash, fly, floatText, guard, lunge, pulse, shake, slash, sleep, statusFx } from './fx';
 
 function playFx(events: FxEvent[], s: CombatState) {
   let blockStack = 0;
   for (const e of events) {
     switch (e.k) {
       case 'dmg':
-        if (e.amt > 0) { slash(e.to, e.amt >= 10, e.to === 'player'); floatText(e.to, `-${e.amt}`, e.to === 'player' ? 'red' : ''); shake(e.to, e.amt >= 10); }
-        else if (e.blocked > 0) floatText(e.to, '차폐', 'small');
+        if (e.amt > 0) {
+          slash(e.to, e.amt >= 10, e.to === 'player');
+          floatText(e.to, `-${e.amt}`, `dmgnum ${e.to === 'player' ? 'red' : ''} ${e.amt >= 10 ? 'big' : ''}`);
+          shake(e.to, e.amt >= 10);
+          if (e.to === 'player') flash('hurt');
+          else if (e.amt >= 10) flash('hit');
+        }
+        if (e.blocked > 0) floatText(e.to, `차폐 −${e.blocked}`, 'small blk', 26);
         break;
       case 'block':
         if (!blockStack) guard(e.to);
-        floatText(e.to, `+${e.amt} 차폐`, 'small', -20 - blockStack * 18);
+        floatText(e.to, `+${e.amt} 차폐`, 'small blk', -20 - blockStack * 22);
         blockStack++;
         break;
       case 'erosion':
-        floatText('erosion', `침식 ${e.amt > 0 ? '+' : ''}${e.amt}%`, 'small');
+        floatText('erosion', `침식 ${e.amt > 0 ? '+' : ''}${e.amt}%`, 'small ero');
         pulse('emblem');
         break;
       case 'mimic': {
@@ -76,7 +83,22 @@ function IntentBits({ s, e, it }: { s: CombatState; e: EnemyInst; it: Intent }) 
   return <>{bits}</>;
 }
 
-export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { initial: CombatState; introEvents: FxEvent[]; onEnd: (s: CombatState) => void; onTick?: (v: { hp: number; erosion: number }) => void; onRetreat: () => void }) {
+export interface CombatHud { kakpul: number; mirrorCharges: number; deckSize: number; relicsOn: number; relics: number; where: string }
+
+/** 플레이 튜토리얼 단계: 상태가 조건을 만족하면 다음으로 넘어간다 */
+const TUT: { id: string; title: string; text: string; done?: (s: CombatState, s0: CombatState) => boolean }[] = [
+  { id: 'intent', title: '적의 의도', text: '적 머리 위 표시는 적이 이번 턴에 할 행동이다. 칼 아이콘은 공격, 숫자는 피해량이다.' },
+  { id: 'card', title: '카드 내기', text: '손패에서 카드를 하나 낸다. 공격 카드는 누른 뒤 적을 고른다. 카드 왼쪽 위 숫자는 쓰는 행동 횟수다.', done: (s, s0) => s.player.energy < s0.player.energy || s.discard.length > s0.discard.length },
+  { id: 'mimic', title: '모사', text: '모사 버튼을 누르고 적을 고른다. 적의 의도가 내 손패로 복제되고, 그 적의 이번 행동은 25% 약해진다.', done: (s) => s.mimicUsed },
+  { id: 'erosion', title: '침식', text: '모사하면 화면 아래 보라색 침식 바가 오른다. 베낄수록 강해지지만 100%가 되면 패배한다.' },
+  { id: 'end', title: '턴 종료', text: '복제한 카드도 내 본다. 할 일을 마치면 노란 턴 종료 버튼을 누른다. 적 단계가 끝나면 다시 내 턴이다.', done: (s) => s.turn >= 2 },
+  { id: 'free', title: '마무리', text: '이제 혼자 해 본다. 적을 쓰러뜨리면 튜토리얼이 끝난다.' },
+];
+
+export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, onDeck, onRelics, tutorial }: {
+  initial: CombatState; introEvents: FxEvent[]; onEnd: (s: CombatState) => void; onTick?: (v: { hp: number; erosion: number }) => void; onRetreat: () => void;
+  hud?: CombatHud; onDeck?: () => void; onRelics?: () => void; tutorial?: boolean;
+}) {
   const [paused, setPaused] = useState(false);
   const [s, setS] = useState(initial);
   const [sel, setSel] = useState<number | null>(null);
@@ -86,10 +108,19 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
   const [banner, setBanner] = useState<string | null>(null);
   const [hover, setHover] = useState<number | null>(null);
   const [hoverMimic, setHoverMimic] = useState(false);
+  const [actor, setActor] = useState<string | null>(null);
   const ended = useRef(false);
+  const [tut, setTut] = useState(tutorial ? 0 : -1);
+  const tutBase = useRef(initial);
+  const tutStep = tut >= 0 && tut < TUT.length ? TUT[tut] : null;
+  useEffect(() => {
+    if (!tutStep?.done) return;
+    if (tutStep.done(s, tutBase.current)) { tutBase.current = s; setTut((v) => v + 1); }
+  }, [s, tutStep]);
+  const tutNext = () => { tutBase.current = s; setTut((v) => (v + 1 >= TUT.length ? -1 : v + 1)); };
   const isBoss = s.kind === 'boss';
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.modal.drawer, .modal .box')) setPaused((v) => !v); };
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.modal.drawer, .modal .box, .deckview')) setPaused((v) => !v); };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, []);
@@ -159,14 +190,33 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
     setSel(null);
     setMimicMode(false);
     const steps = endTurn(s);
+    let announced = false;
     for (let i = 0; i < steps.length; i++) {
-      apply(steps[i]);
-      if (i === 1) setBanner('ENEMY PHASE');
-      await sleep(steps[i].events.length ? 620 : 260);
-      if (steps[i].state.over) return;
+      const st = steps[i];
+      if (st.actor && !announced) {
+        announced = true;
+        setBanner('ENEMY PHASE');
+        await sleep(1100);
+        setBanner(null);
+      }
+      if (st.actor) {
+        // 행동하는 적을 표시하고, 앞으로 달려드는 동작 뒤에 결과를 보여 준다
+        setActor(st.actor);
+        await sleep(380);
+        lunge(st.actor);
+        await sleep(200);
+        apply(st);
+        await sleep(st.events.length ? 1050 : 450);
+        setActor(null);
+        await sleep(160);
+      } else {
+        apply(st);
+        await sleep(st.events.length ? 750 : 280);
+      }
+      if (st.state.over) return;
     }
     setBanner('YOUR TURN');
-    setTimeout(() => setBanner(null), 1000);
+    setTimeout(() => setBanner(null), 1100);
     setBusy(false);
   };
 
@@ -193,9 +243,18 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
   });
 
   return (
-    <div className="combat">
+    <div className="combat" data-tutstep={tutStep?.id}>
       <div className="field">
         <div className="turnno">T{String(s.turn).padStart(2, '0')}</div>
+        <div className="chud">
+          {hud && <div className="ch-where">{hud.where}</div>}
+          <div className="ch-stat hp"><Icon name="heart" size={16} /><span className="ch-bar"><i style={{ width: `${(s.player.hp / s.player.maxHp) * 100}%` }} /></span><b>{s.player.hp}<small>/{s.player.maxHp}</small></b></div>
+          <div className="ch-stat ero" data-fx="erosion-top"><Icon name="erosion" size={16} /><span className="ch-bar ero"><i style={{ width: `${s.erosion}%` }} /></span><b>{s.erosion}%</b></div>
+          {hud && <div className="ch-stat" title="각뿔"><Icon name="kakpul" size={16} /><b>{hud.kakpul}</b><small>각뿔</small></div>}
+          {hud && <div className="ch-stat" title="거울 모사(흡수) 남은 횟수"><Icon name="mirror" size={16} /><b>{hud.mirrorCharges}</b><small>거울 모사</small></div>}
+          {hud && onDeck && <button className="ch-btn" onClick={onDeck}><Icon name="deck" size={15} /> 덱 <b>{hud.deckSize}</b></button>}
+          {hud && onRelics && <button className="ch-btn" onClick={onRelics}><Icon name="relic" size={15} /> 소장품 <b>{hud.relicsOn}/{hud.relics}</b></button>}
+        </div>
         <button className="pausebtn" onClick={() => setPaused(true)} title="일시 정지 (Esc)"><i /><i /></button>
         {paused && (
           <div className="modal map-menu" onClick={() => setPaused(false)}>
@@ -203,8 +262,8 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
               <div className="kicker">PAUSED</div>
               <h2>전투 일시 정지</h2>
               <button className="btn solid icon-btn" onClick={() => setPaused(false)}><Icon name="launch" size={16} /> 계속하기</button>
-              <button className="btn icon-btn" onClick={() => { setPaused(false); onRetreat(); }}><Icon name="back" size={16} /> 맵으로 돌아가기</button>
-              <div className="mono mute" style={{ fontSize: 11 }}>맵으로 돌아가면 이 전투는 없던 일이 되고, 전투 전 상태로 노드를 다시 고를 수 있습니다.</div>
+              <button className="btn icon-btn" onClick={() => { setPaused(false); onRetreat(); }}><Icon name="back" size={16} /> {tutorial ? '튜토리얼 그만두기' : '맵으로 돌아가기'}</button>
+              <div className="mono mute" style={{ fontSize: 11 }}>{tutorial ? '튜토리얼을 마치지 않고 허브로 돌아간다.' : '맵으로 돌아가면 이 전투는 없던 일이 되고, 전투 전 상태로 노드를 다시 고를 수 있다.'}</div>
             </div>
           </div>
         )}
@@ -247,7 +306,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
           <span className="lbl">MIRROR AXIS</span>
           <div data-fx="emblem" style={{ position: 'relative', zIndex: 1, background: 'var(--bg)', borderRadius: '50%' }}>
             {allDone ? (
-              <button className="sunend" onClick={doEnd} title="턴 종료">
+              <button className="sunend" onClick={doEnd} title="턴 종료" data-tut="end">
                 <SunIcon />
                 <span>턴 종료</span>
               </button>
@@ -267,12 +326,12 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
             return (
               <div
                 key={e.uid}
-                className={`unit enemy ${def.tier === 'boss' ? 'boss' : ''} ${targetable ? 'target' : ''} ${mimicable ? 'mimicsel' : ''} ${e.hp <= 0 ? 'dead' : ''}`}
+                className={`unit enemy ${def.tier === 'boss' ? 'boss' : ''} ${targetable ? 'target' : ''} ${mimicable ? 'mimicsel' : ''} ${e.hp <= 0 ? 'dead' : ''} ${actor === `e${e.uid}` ? 'acting' : ''}`}
                 data-fx={`e${e.uid}`}
                 onClick={() => clickEnemy(e)}
               >
                 {e.block > 0 && <span className="blk">{e.block}</span>}
-                <div className={`intent ${atk ? 'atk' : ''} ${e.mimicked ? 'mim' : ''} ${it.kind === 'echo' ? 'echo' : ''} ${intro ? 'hide' : ''}`}>
+                <div data-tut="intent" className={`intent ${atk ? 'atk' : ''} ${e.mimicked ? 'mim' : ''} ${it.kind === 'echo' ? 'echo' : ''} ${intro ? 'hide' : ''}`}>
                   <Icon name={INTENT_ICON[it.kind]} size={15} />
                   <span>{it.label}</span>
                   <span className="v"><IntentBits s={s} e={e} it={it} /></span>
@@ -299,7 +358,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
               <b>{isBoss ? 'SCANNING YOU' : 'SCANNING'}</b>
               {isBoss ? (
                 <>
-                  {s.archLabel ? `${s.archLabel}을(를) 재현합니다` : '아크가 당신의 런 기록을 읽고 있습니다'}
+                  {s.archLabel ? `${s.archLabel}을(를) 재현한다` : '아크가 당신의 런 기록을 읽고 있다'}
                   <ul>
                     {s.scanned.map((id, i) => (
                       <li key={id + i} style={{ animationDelay: `${0.4 + i * 0.35}s` }}>▸ 복제 {String(i + 1).padStart(2, '0')} · {CARDS[id]?.name}</li>
@@ -314,14 +373,22 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
           </div>
         )}
         {banner && <div className="banner" key={banner + s.turn}>{banner}</div>}
-        {!busy && sel != null && selCard && <div className="hint">대상을 선택하세요 · {defOf(selCard).name}</div>}
-        {!busy && mimicMode && <div className="hint">모사할 복제체를 선택하세요 · 의도가 손패로 복제됩니다</div>}
+        {!busy && sel != null && selCard && <div className="hint">대상을 선택한다 · {defOf(selCard).name}</div>}
+        {!busy && mimicMode && <div className="hint">모사할 복제체를 선택한다 · 의도가 손패로 복제된다</div>}
+        {tutStep && !intro && (
+          <div className="tut-box" key={tutStep.id}>
+            <div className="k">TUTORIAL · {tut + 1} / {TUT.length}</div>
+            <b>{tutStep.title}</b>
+            <p><Rich text={tutStep.text} /></p>
+            {!tutStep.done && <button className="btn solid" onClick={tutNext}>{tut + 1 >= TUT.length ? '닫기' : '알겠다 →'}</button>}
+          </div>
+        )}
       </div>
 
       <div className="dock">
-        <div className="energy" data-fx="energy">{s.player.energy}/{s.player.maxEnergy}<small>연산</small></div>
-        <div className="pile">{s.draw.length}<small>뽑을 더미</small></div>
-        <div className="hand" data-fx="hand">
+        <div className="energy" data-fx="energy">{s.player.energy}/{s.player.maxEnergy}<small>행동 횟수</small></div>
+        <div className="pile"><Icon name="deck" size={14} />{s.draw.length}<small>남은 덱</small></div>
+        <div className="hand" data-fx="hand" data-tut="card">
           {s.hand.map((c) => (
             <CardView
               key={c.uid}
@@ -341,8 +408,10 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
           )}
         </div>
         <div className="actions">
+          <button className="endbtn" disabled={busy} onClick={doEnd} data-tut="end"><Icon name="launch" size={15} /> 턴 종료</button>
           <button
-            className={`mimicico ${mimicMode ? 'on' : ''}`}
+            data-tut="mimic"
+            className={`mimicico ${mimicMode ? 'on' : ''} ${!anyMimic && !busy ? 'spent' : ''}`}
             disabled={busy || !anyMimic}
             onClick={() => { setSel(null); setMimicMode(!mimicMode); }}
             onMouseEnter={() => setHoverMimic(true)}
@@ -350,14 +419,13 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
             title="모사"
           >
             <MimicIcon />
-            <b>모사 · 연산 {mimicCost(s)}</b>
+            <b>모사 · 행동 횟수 {mimicCost(s)}</b>
             <small>{s.mimicUsed ? '이번 턴 사용함' : `턴당 1회 · 침식 +${mimicPreview(s)}%`}</small>
           </button>
-          <div className="pile" style={{ width: '100%', height: 34, fontSize: 12 }}>버림 {s.discard.length} · 소멸 {s.exhaust.length}</div>
+          <div className="pilebar">버림 {s.discard.length} · 소멸 {s.exhaust.length}</div>
         </div>
-        <button className="endbtn" disabled={busy} onClick={doEnd}>턴 종료</button>
 
-        <div className="erobar" data-fx="erosion">
+        <div className="erobar" data-fx="erosion" data-tut="erosion">
           <span>침식 {s.erosion}%</span>
           <div className="track">
             {segs.map((g) => (
@@ -378,14 +446,14 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat }: { ini
 function SunIcon() {
   return (
     <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden>
-      <circle className="sun-wave" cx="60" cy="60" r="30" fill="none" stroke="var(--accent)" />
-      <circle className="sun-wave w2" cx="60" cy="60" r="30" fill="none" stroke="var(--accent)" />
+      <circle className="sun-wave" cx="60" cy="60" r="30" fill="none" stroke="var(--turn)" />
+      <circle className="sun-wave w2" cx="60" cy="60" r="30" fill="none" stroke="var(--turn)" />
       <g className="sun-rays">
         {Array.from({ length: 16 }, (_, i) => (
-          <path key={i} transform={`rotate(${i * 22.5} 60 60)`} d={i % 2 ? 'M60 14 V24' : 'M60 6 V24'} stroke="var(--accent)" strokeWidth={i % 2 ? 1.5 : 2.5} strokeLinecap="round" />
+          <path key={i} transform={`rotate(${i * 22.5} 60 60)`} d={i % 2 ? 'M60 14 V24' : 'M60 6 V24'} stroke="var(--turn)" strokeWidth={i % 2 ? 1.5 : 2.5} strokeLinecap="round" />
         ))}
       </g>
-      <circle cx="60" cy="60" r="22" fill="var(--accent)" />
+      <circle cx="60" cy="60" r="22" fill="var(--turn)" />
       <path d="M52 50 L68 60 L52 70 Z" fill="var(--bg)" />
     </svg>
   );
@@ -399,7 +467,7 @@ function MimicIcon() {
       <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" strokeWidth="1" opacity=".4" />
       <g className="mi-l"><path d="M31 14 C21 16 16 24 16 32 C16 40 21 48 31 50 Z" fill="currentColor" /></g>
       <g className="mi-r"><path d="M33 14 C43 16 48 24 48 32 C48 40 43 48 33 50 Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray="3 2" /></g>
-      <path d="M32 8 V56" stroke="var(--accent)" strokeWidth="1" />
+      <path d="M32 8 V56" stroke="var(--turn)" strokeWidth="1" />
       <circle className="mi-dot" cx="32" cy="32" r="2.5" fill="var(--accent)" />
     </svg>
   );

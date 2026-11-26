@@ -51,6 +51,11 @@ const P: Record<string, JSX.Element> = {
   critical: <><path d="M13 2 L5 13 H11 L10 22 L19 10 H13 Z" /></>,
   infinite: <><path d="M12 12 C9 7 3 7 3 12 C3 17 9 17 12 12 C15 7 21 7 21 12 C21 17 15 17 12 12 Z" /></>,
   archive: <><path d="M4 4 H20 V8 H4 Z M5 8 V20 H19 V8" /><path d="M10 12 H14" /></>,
+  // 키워드
+  draw: <><rect x="4" y="7" width="10" height="14" /><path d="M8 4 H18 V17" /><path d="M16 1.5 L18 4 L15.5 6" /></>,
+  energy: <><path d="M12 3 L20 12 L12 21 L4 12 Z" /><path d="M12 8 L15 12 L12 16 L9 12 Z" fill="currentColor" stroke="none" /></>,
+  exhaust: <><path d="M6 20 H18" /><path d="M8 16 L9 12 M12 16 V10 M16 16 L15 12" /><path d="M10 6 L12 3 L14 6" strokeDasharray="1.5 2" /></>,
+  absorb: <><circle cx="12" cy="12" r="8" strokeDasharray="2.5 2" /><path d="M5 12 H11 M8 9 L11 12 L8 15" /><circle cx="15" cy="12" r="2.5" fill="currentColor" stroke="none" /></>,
   back: <path d="M15 5 L8 12 L15 19" />,
   fragment: <><path d="M5 4 L13 6 L9 13 Z" /><path d="M15 9 L20 15 L13 17 Z" /><path d="M6 16 L10 15 L9 21 Z" /></>,
   descend: <><path d="M4 5 H20 M6 10 H18 M8 15 H16" /><path d="M12 17 V22 M10 20 L12 22 L14 20" /></>,

@@ -8,7 +8,7 @@ const list: CardDef[] = [
   { id: 'observe', name: '관측', cat: '전술', cost: 0, target: 'self', block: 2, text: '카드 1장 뽑기. 차폐 2' },
   { id: 'double', name: '이중 절개', cat: '전술', cost: 1, target: 'enemy', dmg: 4, hits: 2, text: '피해 4 × 2' },
   { id: 'wave', name: '충격 파동', cat: '전술', cost: 2, target: 'all', dmg: 8, text: '모든 적에게 피해 8' },
-  { id: 'focus', name: '집중 연산', cat: '전술', cost: 0, target: 'self', exhaust: true, text: '연산 +1. 소멸' },
+  { id: 'focus', name: '집중 가속', cat: '전술', cost: 0, target: 'self', exhaust: true, text: '행동 횟수 +1. 소멸' },
   { id: 'pierce', name: '관통 사격', cat: '전술', cost: 2, target: 'enemy', dmg: 10, text: '피해 10. 취약 2' },
   { id: 'feint', name: '교란', cat: '전술', cost: 1, target: 'enemy', text: '약화 2. 카드 1장 뽑기' },
   // 거울
@@ -40,10 +40,10 @@ export interface RelicDef { id: string; name: string; text: string; pool: 'squad
 const relicList: RelicDef[] = [
   { id: 'focuser', name: '각뿔 집속기', pool: 'squad', shape: [[0, 0], [1, 0]], text: '모사할 때 침식 증가량이 +3%에서 +1%로 줄어든다' },
   { id: 'capacitor', name: '거울 축전기', pool: 'squad', shape: [[0, 0], [1, 0], [1, 1]], text: '분신이 각인 카드를 시전할 때 피해 +30%' },
-  { id: 'plate', name: '전술 방탄판', pool: 'squad', shape: [[0, 0], [0, 1], [1, 0], [1, 1]], text: '모사당한 적의 공격 위력이 25%가 아니라 50% 감소' },
+  { id: 'plate', name: '전술 방탄판', pool: 'squad', shape: [[0, 0], [0, 1], [1, 0], [1, 1]], text: '모사당한 적의 공격 위력이 25%가 아니라 50% 줄어든다' },
   { id: 'lens', name: '균열 렌즈', pool: 'elite', shape: [[0, 0]], text: '모사 카드의 피해 +3' },
   { id: 'coil', name: '반사 코일', pool: 'elite', shape: [[0, 0], [0, 1], [0, 2]], text: '매 턴 시작 시 차폐 2' },
-  { id: 'antenna', name: '탐색 안테나', pool: 'elite', shape: [[0, 0], [0, 1], [0, 2], [1, 1]], text: '전투 첫 턴에 카드 1장 추가로 뽑음' },
+  { id: 'antenna', name: '탐색 안테나', pool: 'elite', shape: [[0, 0], [0, 1], [0, 2], [1, 1]], text: '전투 첫 턴에 카드 1장을 추가로 뽑는다' },
 ];
 export const RELICS: Record<string, RelicDef> = Object.fromEntries(relicList.map((r) => [r.id, r]));
 export const RELIC_LIST = relicList;
@@ -132,14 +132,14 @@ export const SQUADS: SquadDef[] = [
 export const BASE_DECK = ['cut', 'cut', 'cut', 'cut', 'guard', 'guard', 'guard', 'guard', 'observe'];
 
 // ─── 심도 ──────────────────────────────────────────────
-export interface DepthDef { lv: number; name: string; mult: number; frag: number; rule: string; tag?: string }
+export interface DepthDef { lv: number; name: string; mult: number; frag: number; rule: string; tag?: string; debuff?: string }
 export const DEPTHS: DepthDef[] = [
-  { lv: -1, name: '훈련 관측', mult: 0.75, frag: 0.5, tag: '초보 전용', rule: '처음 접속하는 요원을 위한 얕은 층. 적 체력과 공격력이 낮고, 모든 침식 증가량이 절반입니다.' },
-  { lv: 0, name: '표준 관측', mult: 1, frag: 1, rule: '기본 규칙. 거울 프로토콜의 모사와 침식을 익힙니다.' },
-  { lv: 1, name: '왜곡 반사', mult: 1.2, frag: 1.25, rule: '일반 적도 3턴마다 당신의 마지막 카드를 반향합니다.' },
-  { lv: 2, name: '거울 역행', mult: 1.38, frag: 1.5, rule: '반향이 카드를 두 번 따라 씁니다.' },
-  { lv: 3, name: '자아 침식', mult: 1.58, frag: 1.75, rule: '모든 침식 증가량 ×1.5.' },
-  { lv: 4, name: '원형 붕괴', mult: 1.8, frag: 2, rule: '아크가 카드 5장을 스캔하고 처음부터 역상 상태입니다.' },
+  { lv: -1, name: '훈련 관측', mult: 0.75, frag: 0.5, tag: '초보 전용', rule: '처음 접속하는 요원을 위한 얕은 층. 적 체력과 공격력이 낮고, 모든 침식 증가량이 절반이다.' },
+  { lv: 0, name: '표준 관측', mult: 1, frag: 1, rule: '기본 규칙. 거울 프로토콜의 모사와 침식을 익힌다.' },
+  { lv: 1, name: '왜곡 반사', mult: 1.2, frag: 1.25, debuff: '일반 적 반향', rule: '일반 적도 3턴마다 당신의 마지막 카드를 반향한다.' },
+  { lv: 2, name: '거울 역행', mult: 1.38, frag: 1.5, debuff: '반향 2회', rule: '반향이 카드를 두 번 따라 쓴다.' },
+  { lv: 3, name: '자아 침식', mult: 1.58, frag: 1.75, debuff: '침식 증가 ×1.5', rule: '모든 침식 증가량 ×1.5.' },
+  { lv: 4, name: '원형 붕괴', mult: 1.8, frag: 2, debuff: '아크 강화', rule: '아크가 카드 5장을 스캔하고 처음부터 역상 상태다.' },
 ];
 export const MIN_DEPTH = DEPTHS[0].lv;
 export const MAX_DEPTH = DEPTHS[DEPTHS.length - 1].lv;
@@ -154,53 +154,57 @@ export const META_TREE: MetaNode[] = [
   { id: 'dr', name: '피해 감면', cost: 10, req: ['awaken'], x: 27, y: 50, text: '받는 피해 5% 감소' },
   { id: 'recall', name: '기억 회수 효율', cost: 10, req: ['awaken'], x: 27, y: 80, text: '기억 파편 획득 +15%' },
   { id: 'opening', name: '선제 기동 패', cost: 15, req: ['edge'], x: 46, y: 20, text: '전투 첫 턴 카드 1장 추가 드로우' },
-  { id: 'freeMimic', name: '무상 거울 모사', cost: 25, req: ['dr'], x: 46, y: 50, core: true, text: '전투마다 첫 모사의 연산 비용 0' },
+  { id: 'freeMimic', name: '무상 거울 모사', cost: 25, req: ['dr'], x: 46, y: 50, core: true, text: '전투마다 첫 모사의 행동 횟수 소모 0' },
   { id: 'skin', name: '생체 외피 강화', cost: 15, req: ['recall'], x: 46, y: 80, text: '최대 체력 +10' },
   { id: 'sync', name: '분신 동조화', cost: 20, req: ['opening', 'freeMimic'], x: 66, y: 28, text: '분신이 각인 카드를 시전할 때마다 차폐 +2' },
-  { id: 'buffer', name: '자아 완충 회로', cost: 20, req: ['freeMimic'], x: 66, y: 50, text: '침식 구간 경계가 10%씩 늦춰짐 (동요 40%부터)' },
+  { id: 'buffer', name: '자아 완충 회로', cost: 20, req: ['freeMimic'], x: 66, y: 50, text: '침식 구간 경계가 10%씩 늦춰진다 (동요 40%부터)' },
   { id: 'market', name: '암시장 우대권', cost: 15, req: ['freeMimic', 'skin'], x: 66, y: 72, text: '상점 가격 25% 할인' },
-  { id: 'critical', name: '임계 연산', cost: 20, req: ['sync'], x: 86, y: 22, text: '전투 첫 턴 연산 +1' },
+  { id: 'critical', name: '임계 가속', cost: 20, req: ['sync'], x: 86, y: 22, text: '전투 첫 턴 행동 횟수 +1' },
   { id: 'infinite', name: '무한 대칭 프로토콜', cost: 40, req: ['sync', 'buffer', 'market'], x: 86, y: 50, core: true, text: '거울 모사(흡수) 횟수 +1, 대칭 반격 비용 −1' },
   { id: 'archive', name: '원형 데이터 수집', cost: 20, req: ['market'], x: 86, y: 78, text: '아크 처치 시 기억 파편 +10' },
 ];
 export const META: Record<string, MetaNode> = Object.fromEntries(META_TREE.map((n) => [n.id, n]));
 
 // ─── 우연한 만남 ───────────────────────────────────────
-export interface EventDef { id: string; name: string; text: string; options: { label: string; desc: string }[] }
+/** desc는 결과(고른 뒤에만 보임), hint는 고르기 전에 보이는 짧은 분위기 문장 */
+export interface EventDef { id: string; name: string; text: string; options: { label: string; hint: string; desc: string }[] }
 export const EVENTS: EventDef[] = [
   {
     id: 'mirrorSelf', name: '거울 속의 나', text: '깨진 거울 너머의 내가 손을 내민다. "네 카드 하나와 내 것 하나를 바꾸자."',
     options: [
-      { label: '교환한다', desc: '덱의 무작위 카드 1장이 무작위 흡수 카드로 바뀜. 침식 +5%' },
-      { label: '거울을 덮는다', desc: '아무 일도 일어나지 않음' },
+      { label: '교환한다', hint: '손을 마주 댄다. 차가운 유리 너머로 무언가 건너온다.', desc: '덱의 무작위 카드 1장이 무작위 흡수 카드로 바뀐다. 침식 +5%' },
+      { label: '거울을 덮는다', hint: '보지 않으면 없는 것이다.', desc: '아무 일도 일어나지 않는다' },
+      { label: '거울을 깨뜨린다', hint: '주먹을 쥔다. 거울 속의 나도 주먹을 쥔다.', desc: '체력 −5. 각뿔 +20' },
     ],
   },
   {
     id: 'antenna', name: '버려진 안테나', text: '녹슨 안테나가 아직 미약한 신호를 잡고 있다.',
     options: [
-      { label: '주파수를 맞춘다', desc: '이번 구역 지도 전체 공개. 각뿔 +15' },
-      { label: '부품을 뜯는다', desc: '각뿔 +40. 침식 +5%' },
+      { label: '주파수를 맞춘다', hint: '잡음 사이로 누군가의 목소리가 섞여 있다.', desc: '이번 구역 지도 전체 공개. 각뿔 +15' },
+      { label: '부품을 뜯는다', hint: '쓸 만한 건 챙겨 둔다.', desc: '각뿔 +40. 침식 +5%' },
+      { label: '전원을 끈다', hint: '고요가 필요하다.', desc: '침식 −4%' },
     ],
   },
   {
     id: 'broken', name: '깨진 원형', text: '바닥에 흩어진 거울 조각마다 다른 얼굴이 비친다. 하나를 고르면 나머지는 사라질 것이다.',
     options: [
-      { label: '조각을 줍는다', desc: '체력 −8. 침식 −12%' },
-      { label: '지나친다', desc: '아무 일도 일어나지 않음' },
+      { label: '조각을 줍는다', hint: '내 얼굴이 비친 조각이 있다. 아마도.', desc: '체력 −8. 침식 −12%' },
+      { label: '지나친다', hint: '발밑을 조심한다.', desc: '아무 일도 일어나지 않는다' },
     ],
   },
   {
     id: 'whisper', name: '잔상의 속삭임', text: '누군가 내 목소리로 속삭인다. "더 많이 베껴. 그게 너잖아."',
     options: [
-      { label: '받아들인다', desc: '거울 모사 횟수 +1. 침식 +6%' },
-      { label: '귀를 막는다', desc: '체력 6 회복' },
+      { label: '받아들인다', hint: '목소리가 틀린 말을 하지는 않는다.', desc: '거울 모사 횟수 +1. 침식 +6%' },
+      { label: '귀를 막는다', hint: '숨을 고른다.', desc: '체력 6 회복' },
+      { label: '따라 속삭인다', hint: '같은 목소리로 대답해 본다.', desc: '각뿔 +25. 침식 +3%' },
     ],
   },
   {
     id: 'nameless', name: '이름 없는 방', text: '문패가 지워진 방. 여기에 무언가를 두고 가면 다시는 찾을 수 없다.',
     options: [
-      { label: '카드를 두고 간다', desc: '덱에서 카드 1장 제거' },
-      { label: '이름을 새긴다', desc: '침식 −5%' },
+      { label: '카드를 두고 간다', hint: '가벼워지는 것도 방법이다.', desc: '덱에서 카드 1장 제거' },
+      { label: '이름을 새긴다', hint: '아직 내 이름을 기억한다.', desc: '침식 −5%' },
     ],
   },
 ];

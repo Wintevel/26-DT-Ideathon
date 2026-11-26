@@ -1,5 +1,6 @@
 // 소장품 3x3 격자 편집 서랍. 고른 블럭을 격자에 놓아야 효과가 발동한다.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useClosing } from './common';
 import { RELICS } from '../game/data';
 import { canPlace, cellsOf, GRID, occupied, type Placement } from '../game/relicGrid';
 import { Icon } from './Icons';
@@ -26,7 +27,54 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
   const [held, setHeld] = useState<string | null>(null);
   const [rot, setRot] = useState(0);
   const [hover, setHover] = useState<[number, number] | null>(null);
+  const [closing, close] = useClosing(onClose, 300);
   const occ = occupied(grid);
+  // 끌어서 배치: 누른 채 5px 넘게 움직이면 끌기 시작, 칸 위에서 놓으면 배치
+  const drag = useRef<{ id: string; x: number; y: number; on: boolean; fromGrid: boolean } | null>(null);
+  const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
+  const suppressClick = useRef(false);
+  const cellAt = (x: number, y: number): [number, number] | null => {
+    const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('.rg-cell');
+    return el ? [Number(el.dataset.r), Number(el.dataset.c)] : null;
+  };
+  const onDown = (id: string, fromGrid: boolean) => (e: React.PointerEvent) => {
+    if (!editable || e.button !== 0) return;
+    drag.current = { id, x: e.clientX, y: e.clientY, on: false, fromGrid };
+  };
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      if (!d.on) {
+        if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 5) return;
+        d.on = true;
+        const p = grid[d.id];
+        if (p) { const g = { ...grid }; delete g[d.id]; onChange(g); setRot(p.rot); } else if (held !== d.id) setRot(0);
+        setHeld(d.id);
+      }
+      setGhost({ x: e.clientX, y: e.clientY });
+      setHover(cellAt(e.clientX, e.clientY));
+    };
+    const up = (e: PointerEvent) => {
+      const d = drag.current;
+      drag.current = null;
+      if (!d || !d.on) return;
+      suppressClick.current = true;
+      setTimeout(() => { suppressClick.current = false; }, 0);
+      setGhost(null);
+      const c = cellAt(e.clientX, e.clientY);
+      if (c) {
+        const p = { r: c[0], c: c[1], rot };
+        if (canPlace(gridRef.current, d.id, p)) { onChange({ ...gridRef.current, [d.id]: p }); setHeld(null); return; }
+      }
+      // 격자 밖이나 놓을 수 없는 칸이면 손에 든 상태로 남긴다
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+  });
+  const gridRef = useRef(grid);
+  gridRef.current = grid;
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if ((e.key === 'r' || e.key === 'R') && held) setRot((v) => (v + 1) % 4); };
@@ -35,7 +83,7 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
   }, [held]);
 
   const pick = (id: string) => {
-    if (!editable) return;
+    if (!editable || suppressClick.current) return;
     if (held === id) { setHeld(null); return; }
     const g = { ...grid };
     const p = g[id];
@@ -49,7 +97,7 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
   const prevCells = held && prev ? new Set(cellsOf(held, rot).map(([r, c]) => `${prev.r + r},${prev.c + c}`)) : new Set<string>();
 
   const clickCell = (r: number, c: number) => {
-    if (!editable) return;
+    if (!editable || suppressClick.current) return;
     if (held) {
       const p = { r, c, rot };
       if (canPlace(grid, held, p)) { onChange({ ...grid, [held]: p }); setHeld(null); }
@@ -61,16 +109,16 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
 
   const active = relics.filter((id) => id in grid);
   return (
-    <div className="modal drawer" onClick={onClose}>
+    <div className={`modal drawer ${closing ? 'closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget && !suppressClick.current) close(); }}>
       <div className="box rg" onClick={(e) => e.stopPropagation()}>
         <div className="head" style={{ padding: 0, border: 0 }}>
           <div><div className="kicker">RELIC MATRIX · 3×3</div><h2>소장품</h2></div>
           <span className="spacer" />
-          <button className="btn ghost" onClick={onClose}>닫기</button>
+          <button className="btn ghost" onClick={close}>닫기</button>
         </div>
         <p className="mute rg-help">
-          격자에 들어간 소장품만 효과가 발동합니다.{' '}
-          {editable ? <>목록이나 격자에서 블럭을 집고, 칸을 눌러 놓으세요. <kbd>R</kbd> 회전.</> : '전투 중에는 배치를 바꿀 수 없습니다.'}
+          격자에 들어간 소장품만 효과가 발동한다.{' '}
+          {editable ? <>목록이나 격자에서 블럭을 끌어다 칸에 놓는다. 눌러서 집고 놓아도 된다. <kbd>R</kbd> 회전.</> : '전투 중에는 배치를 바꿀 수 없다.'}
         </p>
         <div className="rg-board">
           <div className="rg-grid" onMouseLeave={() => setHover(null)}>
@@ -82,6 +130,9 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
               return (
                 <button
                   key={key}
+                  data-r={r}
+                  data-c={c}
+                  onPointerDown={id ? onDown(id, true) : undefined}
                   className={`rg-cell ${id ? 'full' : ''} ${pv ? (ok ? 'pv ok' : 'pv bad') : ''}`}
                   style={id ? { ['--t' as string]: toneOf(relics, id) } : undefined}
                   onMouseEnter={() => setHover([r, c])}
@@ -99,7 +150,7 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
             {held && (
               <div className="rg-held">
                 <Shape id={held} rot={rot} tone={toneOf(relics, held)} size={16} />
-                <div><b>{RELICS[held].name}</b><div className="mute" style={{ fontSize: 11 }}>놓을 칸을 누르세요</div></div>
+                <div><b>{RELICS[held].name}</b><div className="mute" style={{ fontSize: 11 }}>놓을 칸을 누른다</div></div>
                 <button className="btn ghost icon-btn" onClick={() => setRot((rot + 1) % 4)}><Icon name="recall" size={14} /> 회전</button>
               </div>
             )}
@@ -109,7 +160,7 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
           {relics.map((id) => {
             const on = id in grid;
             return (
-              <button key={id} className={`rg-item ${on ? 'on' : ''} ${held === id ? 'held' : ''}`} onClick={() => pick(id)} disabled={!editable}>
+              <button key={id} className={`rg-item ${on ? 'on' : ''} ${held === id ? 'held' : ''}`} onClick={() => pick(id)} onPointerDown={onDown(id, false)} disabled={!editable}>
                 <Shape id={id} rot={grid[id]?.rot ?? 0} tone={toneOf(relics, id)} />
                 <div>
                   <b>{RELICS[id].name}</b> <span className="st">{held === id ? '들고 있음' : on ? '발동 중' : '미배치 · 효과 없음'}</span>
@@ -120,6 +171,11 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
           })}
         </div>
       </div>
+      {ghost && held && (
+        <div className="rg-ghost" style={{ left: ghost.x, top: ghost.y }}>
+          <Shape id={held} rot={rot} tone={toneOf(relics, held)} size={30} />
+        </div>
+      )}
     </div>
   );
 }
