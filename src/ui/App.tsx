@@ -8,19 +8,20 @@ import {
   type Reward, type Settlement,
 } from '../game/run';
 import type { CombatState, FxEvent, MetaSave, RunState } from '../game/types';
-import { META } from '../game/data';
+import { depthLabel, META } from '../game/data';
 import { Combat } from './Combat';
 import { DeckModal, TopBar } from './common';
 import { CodexView, TreeView } from './MetaScreens';
 import { GuideView } from './Guide';
 import { CursorPing, GridDrop, KeywordTip, MapMenu } from './Overlays';
 import { RelicDrawer } from './RelicGrid';
+import { activeRelics } from '../game/relicGrid';
 import { clearRun, loadRun, saveRun } from './runSave';
 import { DepthSelect, EventView, Hub, MapView, RestView, ResultView, RewardView, ShopView, SquadSelect } from './screens';
 import { getLastPoint, PixelWipe } from './PixelWipe';
 
 export type Outcome = 'win' | 'lose' | 'eroded' | 'abort';
-type Screen = 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
+type Screen = 'tutorial' | 'hub' | 'depth' | 'squad' | 'map' | 'combat' | 'reward' | 'event' | 'rest' | 'shop' | 'result' | 'tree' | 'codex' | 'guide';
 
 export function App() {
   const [meta, setMetaRaw] = useState<MetaSave>(() => loadSave());
@@ -33,7 +34,7 @@ export function App() {
   const [result, setResult] = useState<{ outcome: Outcome; settle: Settlement; archived: boolean; newCodex: number; run: RunState } | null>(null);
   const [modal, setModal] = useState<'deck' | 'relic' | null>(null);
   const [codexNew, setCodexNew] = useState(0);
-  const [live, setLive] = useState<{ hp: number; erosion: number } | null>(null);
+  const [, setLive] = useState<{ hp: number; erosion: number } | null>(null);
   const [depth, setDepth] = useState(0);
   const [wipe, setWipe] = useState<{ fn: () => void; key: number; origin: { x: number; y: number } } | null>(null);
   const [burst, setBurst] = useState(false);
@@ -88,6 +89,14 @@ export function App() {
       setStock(shopStock());
       setScreen('shop');
     }
+  };
+
+  // ── 플레이 튜토리얼: 훈련 심도에서 순찰대 하나와 싸운다 (런·기록에 남지 않음) ──
+  const startTutorial = () => {
+    const r = newRun('scout', -1, []);
+    const st = startCombat(r, ['patrol'], 'normal', [], []);
+    setCombat({ s: st.state, ev: st.events, key: Date.now() });
+    setScreen('tutorial');
   };
 
   const clearNode = (r: RunState) => {
@@ -227,9 +236,9 @@ export function App() {
 
   return (
     <div className="app">
-      {inRun && run && (
+      {inRun && run && screen !== 'combat' && (
         <TopBar
-          run={live && screen === 'combat' ? { ...run, hp: live.hp, erosion: live.erosion } : run}
+          run={run}
           meta={meta.unlocked}
           onMap={screen === 'map'}
           onDeck={() => setModal('deck')}
@@ -244,6 +253,7 @@ export function App() {
           onTree={T(() => setScreen('tree'))}
           onCodex={T(() => setScreen('codex'))}
           onGuide={T(() => setScreen('guide'))}
+          onTutorial={T(startTutorial)}
           onResume={saved ? resume : undefined}
           onReset={() => { if (confirmReset()) { clearSave(); setMeta(emptySave()); } }}
         />
@@ -251,7 +261,16 @@ export function App() {
       {screen === 'depth' && <DepthSelect depth={depth} setDepth={setDepth} onBack={T(() => setScreen('hub'))} onNext={T(() => setScreen('squad'))} />}
       {screen === 'squad' && <SquadSelect depth={depth} onBack={T(() => setScreen('depth'))} onLaunch={T(launch)} />}
       {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={T(enterNode)} onDeck={() => setModal('deck')} onRelics={() => setModal('relic')} />}
-      {screen === 'combat' && combat && <Combat key={combat.key} initial={combat.s} introEvents={combat.ev} onEnd={T(combatEnd)} onTick={setLive} onRetreat={T(() => { if (preRun.current) setRun(preRun.current); setCombat(null); setLive(null); setScreen('map'); })} />}
+      {screen === 'tutorial' && combat && <Combat key={combat.key} tutorial initial={combat.s} introEvents={combat.ev} onEnd={T(() => { setCombat(null); setScreen('hub'); })} onRetreat={T(() => { setCombat(null); setScreen('hub'); })} />}
+      {screen === 'combat' && combat && run && <Combat
+        key={combat.key}
+        hud={{
+          kakpul: run.kakpul, mirrorCharges: run.mirrorCharges, deckSize: run.deck.length, relicsOn: activeRelics(run).length, relics: run.relics.length,
+          where: `${run.pos && nodeById(run, run.pos).type === 'boss' ? 'BOSS' : `STAGE ${String((run.pos ? nodeById(run, run.pos).stage : 0) + 1).padStart(2, '0')}`} · DEPTH ${depthLabel(run.depth)}`,
+        }}
+        onDeck={() => setModal('deck')}
+        onRelics={() => setModal('relic')}
+        initial={combat.s} introEvents={combat.ev} onEnd={T(combatEnd)} onTick={setLive} onRetreat={T(() => { if (preRun.current) setRun(preRun.current); setCombat(null); setLive(null); setScreen('map'); })} />}
       {screen === 'reward' && run && reward && <RewardView run={run} reward={reward} meta={meta.unlocked} onDone={T(rewardDone)} />}
       {screen === 'event' && run && evState && (
         <EventView

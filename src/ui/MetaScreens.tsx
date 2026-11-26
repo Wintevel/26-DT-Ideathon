@@ -82,7 +82,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
         <button className="btn ghost icon-btn" onClick={() => (tab === 'home' ? onBack() : setTab('home'))}><Icon name="back" size={16} /> {tab === 'home' ? '허브로' : '데이터 뱅크'}</button>
         <div><div className="kicker">DATA BANK ARCHIVE</div><h2>데이터 뱅크 · 도감</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>작전 중 획득 · 조우 · 모사한 항목이 자동으로 기록됩니다</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>작전 중 획득 · 조우 · 모사한 항목이 자동으로 기록된다</span>
       </div>
       {tab === 'home' ? (
         <div className="codex-home">
@@ -108,7 +108,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
               <div key={r.id} className={`entry ${c.relics.includes(r.id) ? '' : 'lock'}`}>
                 <div className="tagrow">{r.pool === 'squad' ? '분대 소장품' : '정예 보상'}</div>
                 <h4>{c.relics.includes(r.id) ? r.name : '???'}</h4>
-                <p>{c.relics.includes(r.id) ? <Rich text={r.text} /> : '획득하면 기록됩니다.'}</p>
+                <p>{c.relics.includes(r.id) ? <Rich text={r.text} /> : '획득하면 기록된다.'}</p>
               </div>
             ))}
             {tab === 'enemies' && ENEMY_LIST.map((e) => {
@@ -121,7 +121,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
                   <div className="tagrow">{e.tier === 'boss' ? '구역 보스' : e.tier === 'elite' ? '정예' : e.tier === 'minion' ? '잔상' : '복제체'} · {mim ? '패턴 해독 완료' : seen ? '실루엣만 기록' : '미조우'}</div>
                   <h4>{seen ? e.name : '???'}</h4>
                   {seen && <p>체력 {e.hp[0]}{e.hp[1] !== e.hp[0] ? `~${e.hp[1]}` : ''}</p>}
-                  <p>{mim || (seen && e.tier === 'boss') ? e.desc : seen ? '한 번 모사하면 행동 패턴이 공개됩니다.' : '조우하면 기록됩니다.'}</p>
+                  <p>{mim || (seen && e.tier === 'boss') ? e.desc : seen ? '한 번 모사하면 행동 패턴이 공개된다.' : '조우하면 기록된다.'}</p>
                   {mim && abs && <p>흡수 시: {CARD_LIST.find((x) => x.id === abs)?.name}</p>}
                 </div>
               );
@@ -130,7 +130,7 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
               <div key={e.id} className={`entry ${c.events.includes(e.id) ? '' : 'lock'}`}>
                 <div className="tagrow">거울 섹터 분기</div>
                 <h4>{c.events.includes(e.id) ? e.name : '???'}</h4>
-                <p>{c.events.includes(e.id) ? <Rich text={e.text} /> : '조우하면 기록됩니다.'}</p>
+                <p>{c.events.includes(e.id) ? <Rich text={e.text} /> : '조우하면 기록된다.'}</p>
                 {c.events.includes(e.id) && e.options.map((o) => <p key={o.label}>▸ {o.label}: {o.desc}</p>)}
               </div>
             ))}
@@ -139,9 +139,9 @@ export function CodexView({ meta, onBack }: { meta: MetaSave; onBack: () => void
                 <div className="tagrow">원형 #{String(i + 1).padStart(2, '0')} · {a.at} · DEPTH {depthLabel(a.depth)}</div>
                 <h4>{squadName(a.squad)}의 원형</h4>
                 <p>주력 카드: {a.cards.map((id) => CARD_LIST.find((x) => x.id === id)?.name).join(' / ')}</p>
-                <p>다음 작전에서 아크가 이 덱을 재현할 수 있습니다.</p>
+                <p>다음 작전에서 아크가 이 덱을 재현할 수 있다.</p>
               </div>
-            )) : <div className="entry lock"><h4>기록 없음</h4><p>침식 100%로 작전이 끝나면, 그 런의 덱이 여기 원형으로 남습니다.</p></div>)}
+            )) : <div className="entry lock"><h4>기록 없음</h4><p>침식 100%로 작전이 끝나면, 그 런의 덱이 여기 원형으로 남는다.</p></div>)}
           </div>
         </>
       )}

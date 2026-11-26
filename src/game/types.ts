@@ -125,6 +125,8 @@ export type FxEvent =
 export interface Step {
   state: CombatState;
   events: FxEvent[];
+  /** 이 단계에서 행동한 적 (data-fx 키) */
+  actor?: string;
 }
 
 export type NodeType = 'combat' | 'elite' | 'event' | 'rest' | 'shop' | 'boss';

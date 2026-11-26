@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CARDS, DEPTHS, depthDef, depthLabel, ENEMIES, EVENT_MAP, MAX_DEPTH, MIN_DEPTH, RELICS, SQUADS, type DepthDef } from '../game/data';
 import { erosionGain, tierOf, TIER_NAMES } from '../game/engine';
 import { currentStage, nodeById, priceOf, reachable, STAGES, type Reward, type Settlement } from '../game/run';
@@ -11,38 +11,59 @@ import { Rich } from './Rich';
 import { activeRelics, occupied } from '../game/relicGrid';
 
 // ─── 허브 ──────────────────────────────────────────────
-export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset, onResume }: { meta: MetaSave; onStart: () => void; onTree: () => void; onCodex: () => void; onGuide: () => void; onReset: () => void; onResume?: () => void }) {
+/** 오프닝은 페이지를 처음 열었을 때 한 번만 재생한다 */
+let openingPlayed = false;
+export function Hub({ meta, onStart, onTree, onCodex, onGuide, onTutorial, onReset, onResume }: { meta: MetaSave; onStart: () => void; onTree: () => void; onCodex: () => void; onGuide: () => void; onTutorial: () => void; onReset: () => void; onResume?: () => void }) {
   const [hover, setHover] = useState(false);
   const [launching, setLaunching] = useState(false);
+  // intro: 엠블럼만 가운데 → slide: 엠블럼이 왼쪽으로 → open: 버튼이 오른쪽에서 들어옴
+  const [phase, setPhase] = useState<'intro' | 'slide' | 'open'>(openingPlayed ? 'open' : 'intro');
+  useEffect(() => {
+    if (openingPlayed) return;
+    openingPlayed = true;
+    const t1 = setTimeout(() => setPhase('slide'), 1500);
+    const t2 = setTimeout(() => setPhase('open'), 2050);
+    const skip = () => { clearTimeout(t1); clearTimeout(t2); setPhase('open'); };
+    window.addEventListener('pointerdown', skip, { once: true });
+    window.addEventListener('keydown', skip, { once: true });
+    return () => { clearTimeout(t1); clearTimeout(t2); window.removeEventListener('pointerdown', skip); window.removeEventListener('keydown', skip); };
+  }, []);
   const start = () => {
     if (launching) return;
     setLaunching(true);
     setTimeout(onStart, 900);
   };
   return (
-    <div className={`screen hub ${launching ? 'launching' : ''}`}>
+    <div className={`screen hub ph-${phase} ${launching ? 'launching' : ''}`}>
       <div className="vtitle">MIRROR <span>PROTOCOL</span></div>
       <div className="center">
-        <div className="hub-emblem">
-          <Emblem size={260} className={hover ? 'dim' : ''} />
-          <div className={`launch-diamond ${hover ? 'on' : ''} ${launching ? 'go' : ''}`}><span /></div>
-        </div>
-        <div>
-          <h1>거울 프로토콜</h1>
-          <div className="sub">DOPPELGANGER PROTOCOL · 침묵 회랑 침투 작전</div>
-        </div>
-        <div className="frag"><Icon name="fragment" size={16} /> 보유 기억 파편<b>{meta.fragments}</b></div>
-        <div className="menu">
-          {onResume && <button className="btn icon-btn resume" onClick={onResume}><Icon name="descend" size={18} /> 작전 이어하기</button>}
-          <button className="btn solid icon-btn" onClick={start} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
-            <Icon name="launch" size={18} /> 출격 준비
-          </button>
-          <button className="btn icon-btn" onClick={onTree}><Icon name="tree" size={18} /> 우위 선점</button>
-          <button className="btn icon-btn" onClick={onCodex}><Icon name="codex" size={18} /> 데이터 뱅크 · 도감</button>
-        </div>
-        <div className="hub-sub">
-          <button className="btn ghost icon-btn" onClick={onGuide}><Icon name="codex" size={13} /> 작전 교본 · 튜토리얼</button>
-          <button className="btn ghost reset" onClick={onReset}>기록 초기화</button>
+        <div className="hub-stage">
+          <div className="hub-left">
+            <div className="hub-emblem">
+              <Emblem size={260} className={hover ? 'dim' : ''} />
+              <div className={`launch-diamond ${hover ? 'on' : ''} ${launching ? 'go' : ''}`}><span /></div>
+            </div>
+          </div>
+          <div className="hub-right">
+            <div className="hub-in" style={{ ['--k' as string]: 0 }}>
+              <h1>거울 프로토콜</h1>
+              <div className="sub">DOPPELGANGER PROTOCOL · 침묵 회랑 침투 작전</div>
+            </div>
+            <div className="frag hub-in" style={{ ['--k' as string]: 1 }}><Icon name="fragment" size={16} /> 보유 기억 파편<b>{meta.fragments}</b></div>
+            <div className="menu">
+              {onResume && <button className="btn icon-btn resume hub-in" style={{ ['--k' as string]: 2 }} onClick={onResume}><Icon name="descend" size={18} /> 작전 이어하기</button>}
+              <button className="btn solid icon-btn hub-in" style={{ ['--k' as string]: 2.5 }} onClick={start} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
+                <Icon name="launch" size={18} /> 출격 준비
+              </button>
+              <button className="btn icon-btn hub-in" style={{ ['--k' as string]: 3 }} onClick={onTree}><Icon name="tree" size={18} /> 우위 선점</button>
+              <button className="btn icon-btn hub-in" style={{ ['--k' as string]: 3.5 }} onClick={onCodex}><Icon name="codex" size={18} /> 데이터 뱅크 · 도감</button>
+            </div>
+            <div className="hub-sub hub-in" style={{ ['--k' as string]: 4 }}>
+              <button className="btn ghost icon-btn" onClick={onTutorial}><Icon name="sword" size={13} /> 플레이 튜토리얼</button>
+              <button className="btn ghost icon-btn" onClick={onGuide}><Icon name="codex" size={13} /> 작전 교본</button>
+              <button className="btn ghost reset" onClick={onReset}>기록 초기화</button>
+            </div>
+          </div>
         </div>
       </div>
       <div className="right">
@@ -50,7 +71,7 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset, onResume
         <div>선점한 우위 {meta.unlocked.length} / 13</div>
         <div>원형 기록 {meta.archive.length}건</div>
         <br />
-        <div>// 적의 의도를 모사하라.</div>
+        <div>// 적의 의도를 모사한다.</div>
         <div>// 베낀 만큼 당신은 강해지고,</div>
         <div>// 베낀 만큼 당신은 사라진다.</div>
         <div>// 구역의 끝에서 당신을 만난다.</div>
@@ -62,29 +83,34 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onReset, onResume
 
 // ─── 출격 준비 1: 프로토콜 심도 ────────────────────────
 const DEPTH_ICO = (lv: number) => (lv < 0 ? 'd0' : DEPTH_ICON[lv]);
+// 왼쪽 탑: 아이소메트릭 층이 아래로 쌓인다
+const TW = 250, TX = 56, TD = 34, TH = 52, TY = TD + 6;
+const TCX = TX + TW / 2;
 export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number; setDepth: (d: number) => void; onBack: () => void; onNext: () => void }) {
   const d = depthDef(depth);
-  const box = useRef<HTMLDivElement>(null);
+  const svg = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState(false);
-  const [probeY, setProbeY] = useState(0);
   const clamp = (v: number) => Math.max(MIN_DEPTH, Math.min(MAX_DEPTH, v));
+  const N = DEPTHS.length;
+  const VH = TY + N * TH + TD + 70;
+  const VW = TX + TW + 10;
+  const layerTop = (i: number) => TY + i * TH;
+  const idx = DEPTHS.findIndex((x) => x.lv === depth);
+  const probeY = layerTop(idx) + TD / 2 + TH / 2;
   const pick = (clientY: number) => {
-    const el = box.current;
+    const el = svg.current;
     if (!el) return;
-    let best = MIN_DEPTH;
-    el.querySelectorAll<HTMLElement>('.slab').forEach((l) => { if (clientY >= l.getBoundingClientRect().top - 10) best = Number(l.dataset.lv); });
-    if (best !== depth) setDepth(best);
+    const r = el.getBoundingClientRect();
+    const y = ((clientY - r.top) / r.height) * VH;
+    const i = Math.max(0, Math.min(N - 1, Math.floor((y - TY - TD / 2) / TH)));
+    const lv = DEPTHS[i].lv;
+    if (lv !== depth) setDepth(lv);
   };
-  // 탐침 위치: 선택된 층의 가운데
-  useLayoutEffect(() => {
-    const el = box.current?.querySelector<HTMLElement>(`.slab[data-lv="${depth}"]`);
-    if (el) setProbeY(el.offsetTop + el.offsetHeight / 2);
-  }, [depth]);
   // 휠: 한 칸씩 (트랙패드는 누적)
   const depthRef = useRef(depth);
   depthRef.current = depth;
   useEffect(() => {
-    const el = box.current?.parentElement;
+    const el = svg.current?.parentElement;
     if (!el) return;
     let acc = 0, last = 0;
     const w = (e: WheelEvent) => {
@@ -109,48 +135,94 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [depth, setDepth, onNext]);
-  const slab = (x: DepthDef, i: number) => (
-    <button
-      key={x.lv}
-      data-lv={x.lv}
-      className={`slab ${x.lv < 0 ? 'easy' : ''} ${x.lv === MAX_DEPTH ? 'last' : ''} ${depth === x.lv ? 'on' : ''} ${x.lv <= depth ? 'fill' : ''}`}
-      style={{ ['--i' as string]: i, zIndex: 20 - i }}
-    >
-      <span className="t">
-        <span className="dl">DEPTH <em>{depthLabel(x.lv)}</em>{x.tag && <small>{x.tag}</small>}</span>
-        <span className="meta">적 체력 {Math.round(x.mult * 100)}% · 파편 ×{x.frag}</span>
-      </span>
-      <span className="ic"><Icon name={DEPTH_ICO(x.lv)} size={24} stroke={1.4} /></span>
-    </button>
-  );
+  const rules = DEPTHS.filter((x) => x.lv >= 1 && x.lv <= depth);
+  const ang = (Math.atan2(TD, TW / 2) * 180) / Math.PI;
   return (
     <div className="screen">
       <div className="head">
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 허브로</button>
         <div><div className="kicker">PRE-LAUNCH · STEP 1 / 2</div><h2>프로토콜 심도 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>끌어 내리거나 휠을 굴려 심도를 고르세요 · ↑↓ 키</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>탑을 끌어 내리거나 휠을 굴려 심도를 고른다 · ↑↓ 키</span>
       </div>
-      <div className="wrap strata-wrap">
-        <div
-          ref={box}
-          className={`slabs ${drag ? 'dragging' : ''}`}
-          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag(true); pick(e.clientY); }}
-          onPointerMove={(e) => drag && pick(e.clientY)}
-          onPointerUp={() => setDrag(false)}
-          onPointerCancel={() => setDrag(false)}
-        >
-          <div className="shaft"><span className="cable" style={{ height: probeY }} /><span className="probe" style={{ top: probeY }}><Icon name="antenna" size={16} /></span><span className="readout" style={{ top: probeY }}>{depthLabel(depth)}</span></div>
-          {DEPTHS.filter((x) => x.lv < 0).map((x, i) => slab(x, i))}
-          <div className="surface"><span>SURFACE</span><i /></div>
-          {DEPTHS.filter((x) => x.lv >= 0).map((x) => slab(x, x.lv + 1))}
-          <div className="bedrock">CORE · 아크</div>
+      <div className="wrap depth-layout">
+        <div className="tower-wrap">
+          <svg
+            ref={svg}
+            className={`tower ${drag ? 'dragging' : ''}`}
+            viewBox={`0 0 ${VW} ${VH}`}
+            width={VW}
+            height={VH}
+            onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag(true); pick(e.clientY); }}
+            onPointerMove={(e) => drag && pick(e.clientY)}
+            onPointerUp={() => setDrag(false)}
+            onPointerCancel={() => setDrag(false)}
+          >
+            {/* 탐침 케이블 */}
+            <line x1="22" y1="0" x2="22" y2={VH - 40} className="t-shaft" />
+            <line x1="22" y1="0" x2="22" y2="1" className="t-cable" style={{ transform: `scaleY(${probeY})` }} />
+            <g className="t-probe" style={{ transform: `translate(22px, ${probeY}px)` }}>
+              <rect x="-11" y="-11" width="22" height="22" transform="rotate(45)" />
+              <rect className="t-ping" x="-11" y="-11" width="22" height="22" transform="rotate(45)" />
+              <text x="0" y="30" textAnchor="middle">{depthLabel(depth)}</text>
+            </g>
+            {/* 층: 아래층부터 그려야 윗층의 윗면이 덮인다 */}
+            {DEPTHS.map((x, i) => ({ x, i })).reverse().map(({ x, i }) => {
+              const t = layerTop(i);
+              const fill = x.lv <= depth;
+              const on = x.lv === depth;
+              const L = `${TX},${t} ${TCX},${t + TD} ${TCX},${t + TD + TH} ${TX},${t + TH}`;
+              const R = `${TCX},${t + TD} ${TX + TW},${t} ${TX + TW},${t + TH} ${TCX},${t + TD + TH}`;
+              const T = `${TX},${t} ${TCX},${t - TD} ${TX + TW},${t} ${TCX},${t + TD}`;
+              return (
+                <g key={x.lv} className={`t-layer ${fill ? 'fill' : ''} ${on ? 'on' : ''} ${x.lv < 0 ? 'easy' : ''} ${x.lv === MAX_DEPTH ? 'last' : ''}`} style={{ ['--i' as string]: i }}>
+                  {i === 0 && <polygon className="f-top" points={T} />}
+                  <polygon className="f-l" points={L} />
+                  <polygon className="f-r" points={R} />
+                  <g transform={`translate(${TX + 18} ${t + 33}) skewY(${ang})`}>
+                    <text className="t-code">{depthLabel(x.lv)}</text>
+                  </g>
+                  <g transform={`translate(${TCX + 14} ${t + TD + 22}) skewY(${-ang})`}>
+                    <text className="t-name">{x.name}</text>
+                  </g>
+                </g>
+              );
+            })}
+            {/* 아래로 이어지는 화살표: 코어 */}
+            <path className="t-arrow" d={`M${TCX} ${layerTop(N - 1) + TD + TH} V${VH - 16} M${TCX - 12} ${VH - 30} L${TCX} ${VH - 16} L${TCX + 12} ${VH - 30}`} />
+            <text className="t-core" x={TCX + 22} y={VH - 22}>CORE · 아크</text>
+          </svg>
         </div>
-        <aside className="strata-detail" key={depth}>
-          <div className="mono mute" style={{ fontSize: 11, letterSpacing: '.14em' }}>DEPTH {depthLabel(depth)}{d.tag ? ` · ${d.tag}` : ''}</div>
-          <div className="big-ic"><Icon name={DEPTH_ICO(depth)} size={64} stroke={1.2} /></div>
-          <b>{d.name}</b>
-          <p className="mute">{d.rule}</p>
+        <aside className="depth-panel" key={depth}>
+          <div className="dp-top">
+            <div className="dp-d">
+              <span className="k">DEPTH</span>
+              <b>{depthLabel(depth)}</b>
+            </div>
+            <div className="dp-name">
+              <span className="dp-ic"><Icon name={DEPTH_ICO(depth)} size={34} stroke={1.3} /></span>
+              <div><strong>{d.name}</strong>{d.tag && <small>{d.tag}</small>}</div>
+            </div>
+          </div>
+          <div className="dp-stats">
+            <div><span><Icon name="heart" size={15} /> 적 기본 체력</span><b>{Math.round(d.mult * 100)}%</b></div>
+            <div><span><Icon name="fragment" size={15} /> 기억 파편</span><b>×{d.frag}</b></div>
+          </div>
+          <div className="dp-debuff">
+            <span className="k"><Icon name="debuff" size={15} /> 기본 난이도 디버프</span>
+            {rules.length ? (
+              <ul>
+                {rules.map((x) => (
+                  <li key={x.lv} className={x.lv === depth ? 'new' : ''}>
+                    <em>{depthLabel(x.lv)}</em>
+                    <div><b>{x.debuff}</b><span>{x.rule}</span></div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>{d.rule}</p>
+            )}
+          </div>
           <div className="gauge">{DEPTHS.map((x) => <i key={x.lv} className={x.lv <= depth ? 'on' : ''} />)}</div>
           <button className="btn solid icon-btn" onClick={onNext}>이 심도로 하강 <Icon name="descend" size={16} /></button>
         </aside>
@@ -168,7 +240,7 @@ export function SquadSelect({ depth, onBack, onLaunch }: { depth: number; onBack
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 심도 선택</button>
         <div><div className="kicker">PRE-LAUNCH · STEP 2 / 2 · DEPTH {depthLabel(depth)} {depthDef(depth).name}</div><h2>전술 분대 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>분대를 누르면 상세 정보가 펼쳐집니다</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>분대를 누르면 특징과 시작 구성이 펼쳐진다</span>
       </div>
       <div className="wrap">
         <div className="squad-row">
@@ -180,13 +252,13 @@ export function SquadSelect({ depth, onBack, onLaunch }: { depth: number; onBack
                   <span className="code">{s.code}</span>
                   <div className="sq-pt"><Portrait kind={s.id} size={150} /></div>
                   <h4>{s.name}</h4>
-                  <p><Rich text={s.perks.join(', ')} /></p>
                   <span className="sq-more">{open ? '접기' : '상세 보기'} <Icon name="back" size={12} style={{ transform: open ? 'none' : 'rotate(180deg)' }} /></span>
                 </button>
                 <div className="sq-detail" aria-hidden={!open}>
                   <div className="sq-in">
                     <span className="tag"><Icon name={SQUAD_ICON[s.id]} size={14} /> {s.tag}</span>
                     <p className="desc"><Rich text={s.desc} /></p>
+                    <ul className="sq-perks">{s.perks.map((p) => <li key={p}><Rich text={p} /></li>)}</ul>
                     <div className="sq-stats">
                       <span><Icon name="heart" size={14} /> 체력 <b>{s.maxHp}</b></span>
                       <span><Icon name="kakpul" size={14} /> 각뿔 <b>{s.kakpul}</b></span>
@@ -349,7 +421,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
               ))}
             </div>
           )}
-          <div className="rp-next mono mute">이후 연결 {pk.next.length}갈래 · 다른 후보는 이번 구역에서 닫힙니다</div>
+          <div className="rp-next mono mute">이후 연결 {pk.next.length}갈래 · 다른 후보는 이번 구역에서 닫힌다</div>
           <button className="btn solid icon-btn rp-go" onClick={() => onEnter(pk.id)}>루트 확정 <Icon name="descend" size={16} /></button>
         </aside>
       )}
@@ -380,55 +452,58 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
 }
 
 // ─── 보상 ──────────────────────────────────────────────
+/** 카드가 가운데 한 점에서 부채꼴로 촤락 펼쳐지며 나온다 */
+function DealRow({ ids, picked, onPick, delay, sub }: { ids: string[]; picked: string | null; onPick: (id: string) => void; delay: number; sub?: (id: string) => string }) {
+  return (
+    <div className="deal">
+      {ids.map((id, k) => {
+        const off = k - (ids.length - 1) / 2;
+        return (
+          <div
+            key={id}
+            className={`deal-card ${picked === id ? 'picked' : picked ? 'faded' : ''}`}
+            style={{ ['--dx' as string]: `${-off * 150}px`, ['--rot' as string]: `${off * 14}deg`, animationDelay: `${delay + k * 0.13}s` }}
+          >
+            <CardView id={id} onClick={() => onPick(id)} />
+            {sub && <small>{sub(id)}</small>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function RewardView({ run, reward, meta, onDone }: { run: RunState; reward: Reward; meta: string[]; onDone: (card: string | null, absorbId: string | null) => void }) {
   const [card, setCard] = useState<string | null>(null);
   const [abs, setAbs] = useState<string | null>(null);
   const after = Math.min(100, run.erosion + erosionGain(8, run.depth));
+  const hasAbs = reward.absorbOptions.length > 0;
   return (
     <div className="screen" style={{ minHeight: 'auto', flex: 1 }}>
       <div className="center-wrap">
         <div className="big-title clear-rise">CLEAR</div>
         <div className="rw-body">
-        <div className="mono mute">{reward.boss ? '보스 격파 · 마지막 카드 1장을 고르면 작전 결과로 넘어갑니다' : <>구역 확보 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</>}</div>
+          <div className="mono mute">{reward.boss ? '보스 격파 · 마지막 카드 1장을 고르면 작전 결과로 넘어간다' : <>구역 확보 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</>}</div>
 
-        {reward.absorbOptions.length > 0 && (
-          <div className="panel" style={{ marginTop: 18 }}>
-            <div className="k">ABSORB · 남은 거울 모사 {run.mirrorCharges}회</div>
-            <h3>흡수</h3>
-            <div className="mute" style={{ fontSize: 12 }}>흡수하면 침식 {run.erosion}% → {after}% ({TIER_NAMES[tierOf(after, meta)]}). 흡수 카드는 아크가 당신을 스캔할 때도 쓰입니다.</div>
-            <div className="choices">
-              {reward.absorbOptions.map((id) => (
-                <div key={id} className={`choice ${abs === id ? 'picked' : abs ? 'faded' : ''}`}>
-                  <CardView id={id} onClick={() => setAbs(abs === id ? null : id)} />
-                  <small>{ENEMIES[CARDS[id].source!].name}의 기술</small>
-                </div>
-              ))}
-            </div>
+          {hasAbs && (
+            <section className="rw-sec abs">
+              <div className="rw-h"><span className="k">ABSORB · 남은 거울 모사 {run.mirrorCharges}회</span><h3>흡수 <small>침식 {run.erosion}% → {after}% ({TIER_NAMES[tierOf(after, meta)]})</small></h3></div>
+              <DealRow ids={reward.absorbOptions} picked={abs} onPick={(id) => setAbs(abs === id ? null : id)} delay={1.5} sub={(id) => `${ENEMIES[CARDS[id].source!].name}의 기술`} />
+            </section>
+          )}
+
+          <section className="rw-sec">
+            <div className="rw-h"><span className="k">REWARD</span><h3>카드 1장 선택</h3></div>
+            <DealRow ids={reward.cards} picked={card} onPick={(id) => setCard(card === id ? null : id)} delay={hasAbs ? 1.95 : 1.5} />
+          </section>
+
+          {reward.relic && (
+            <div className="rw-relic"><Icon name="relic" size={20} /><div><b>{RELICS[reward.relic].name}</b><div className="mute"><Rich text={RELICS[reward.relic].text} /></div></div></div>
+          )}
+
+          <div style={{ marginTop: 20 }}>
+            <button className="btn solid" onClick={() => onDone(card, abs)}>{reward.boss ? (card ? '확정하고 작전 완료 →' : '건너뛰고 작전 완료 →') : card || abs ? '확정하고 진행 →' : '건너뛰고 진행 →'}</button>
           </div>
-        )}
-
-        <div className="panel" style={{ marginTop: 14 }}>
-          <div className="k">REWARD</div>
-          <h3>카드 1장 선택</h3>
-          <div className="choices">
-            {reward.cards.map((id) => (
-              <div key={id} className={`choice ${card === id ? 'picked' : card ? 'faded' : ''}`}>
-                <CardView id={id} onClick={() => setCard(card === id ? null : id)} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {reward.relic && (
-          <div className="panel" style={{ marginTop: 14 }}>
-            <div className="k">RELIC</div>
-            <div className="relic"><div className="ico"><span><Icon name="relic" size={20} /></span></div><div><b>{RELICS[reward.relic].name}</b><div className="mute"><Rich text={RELICS[reward.relic].text} /></div></div></div>
-          </div>
-        )}
-
-        <div style={{ marginTop: 20 }}>
-          <button className="btn solid" onClick={() => onDone(card, abs)}>{reward.boss ? (card ? '확정하고 작전 완료 →' : '건너뛰고 작전 완료 →') : card || abs ? '확정하고 진행 →' : '건너뛰고 진행 →'}</button>
-        </div>
         </div>
       </div>
     </div>
@@ -440,22 +515,29 @@ export function EventView({ eventId, run, onChoose, result, onContinue, needRemo
   eventId: string; run: RunState; onChoose: (i: number) => void; result: string | null; onContinue: () => void; needRemove: boolean; onRemove: (uid: number) => void;
 }) {
   const ev = EVENT_MAP[eventId];
+  const [chosen, setChosen] = useState<number | null>(null);
+  const opt = chosen != null ? ev.options[chosen] : null;
   return (
-    <div className="screen" style={{ minHeight: 'auto', flex: 1 }}>
+    <div className="screen evt-screen" style={{ minHeight: 'auto', flex: 1 }}>
       <div className="center-wrap">
         <Emblem size={120} erosion={run.erosion} />
         <div className="panel" style={{ marginTop: 16 }}>
           <div className="k">CHANCE ENCOUNTER · 거울 섹터 분기</div>
           <h3 style={{ fontSize: 22 }}>{ev.name}</h3>
-          <p className="storytext"><Rich text={result ?? ev.text} /></p>
+          <p className="storytext" key={result ? 'r' : 's'}><Rich text={result ?? ev.text} /></p>
           {!result ? (
             <div className="ev-opts">
               {ev.options.map((o, i) => (
-                <button className="ev-opt" key={o.label} onClick={() => onChoose(i)}><b>{o.label}</b><small><Rich text={o.desc} /></small></button>
+                <button className="ev-opt" key={o.label} style={{ animationDelay: `${0.25 + i * 0.12}s` }} onClick={() => { setChosen(i); onChoose(i); }}>
+                  <em className="ev-n">{i + 1}</em><b>{o.label}</b><small>{o.hint}</small>
+                </button>
               ))}
             </div>
           ) : (
-            !needRemove && <div style={{ marginTop: 18 }}><button className="btn solid" onClick={onContinue}>계속 →</button></div>
+            <>
+              {opt && <div className="ev-result"><span className="k">선택 · {opt.label}</span><b><Rich text={opt.desc} /></b></div>}
+              {!needRemove && <div style={{ marginTop: 18 }}><button className="btn solid" onClick={onContinue}>계속 →</button></div>}
+            </>
           )}
         </div>
       </div>
@@ -522,10 +604,10 @@ export function ShopView({ run, meta, stock, onBuy, onService, onLeave }: {
 export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: { outcome: 'win' | 'lose' | 'eroded' | 'abort'; run: RunState; settle: Settlement; archived: boolean; newCodex: number; onHub: () => void }) {
   const title = { win: 'SECTOR CLEARED', eroded: 'REPLACED', lose: 'SIGNAL LOST', abort: 'MISSION ABORTED' }[outcome];
   const sub = {
-    win: '구역 정화 완료. 거울 속의 당신을 넘어섰습니다.',
-    eroded: '침식 100%. 당신은 원형이 되었습니다.',
-    lose: '신호 소실. 본체의 기록이 회수됩니다.',
-    abort: '출격을 취소했습니다. 이번 작전의 보상은 없지만 기록은 남습니다.',
+    win: '구역 정화 완료. 거울 속의 당신을 넘어섰다.',
+    eroded: '침식 100%. 당신은 원형이 되었다.',
+    lose: '신호 소실. 본체의 기록이 회수된다.',
+    abort: '출격을 취소했다. 이번 작전의 보상은 없지만 기록은 남는다.',
   }[outcome];
   const st = run.stats;
   const top = useMemo(() => Object.entries(st.playCounts).sort((a, b) => b[1] - a[1]).slice(0, 3), [st]);
@@ -562,7 +644,7 @@ export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: 
         <div className="mono mute" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.8 }}>
           가장 많이 쓴 카드: {top.map(([id, n]) => `${CARDS[id]?.name} ×${n}`).join(' · ') || '—'}<br />
           도감 신규 기록 {newCodex}건
-          {archived && <><br />이 런의 덱이 원형 기록에 저장되었습니다. 다음 작전의 아크가 당신을 재현할 수 있습니다.</>}
+          {archived && <><br />이 런의 덱이 원형 기록에 저장되었다. 다음 작전의 아크가 당신을 재현할 수 있다.</>}
         </div>
         <div style={{ marginTop: 20 }}><button className="btn solid" onClick={onHub}>허브로 →</button></div>
       </div>

@@ -15,7 +15,7 @@ export function MapMenu({ onClose, onSave, onAbandon }: { onClose: () => void; o
         <button className={`btn ghost icon-btn danger ${armed ? 'armed' : ''}`} onClick={() => (armed ? onAbandon() : setArmed(true))}>
           <Icon name="debuff" size={16} /> {armed ? '한 번 더 누르면 출격 취소 (보상 없음)' : '출격 취소하기'}
         </button>
-        <div className="mono mute" style={{ fontSize: 11 }}>ESC · 닫기 / 맵에 있을 때마다 진행 상황이 자동 저장됩니다</div>
+        <div className="mono mute" style={{ fontSize: 11 }}>ESC · 닫기 / 맵에 있을 때마다 진행 상황이 자동 저장된다</div>
       </div>
     </div>
   );
@@ -52,7 +52,7 @@ export function CursorPing() {
 }
 
 /** 키워드 위에 마우스를 잠시 올려 두면 작은 설명 팝업을 띄운다 */
-const KW_DELAY = 2500;
+const KW_DELAY = 1000;
 export function KeywordTip() {
   const [tip, setTip] = useState<{ k: string; x: number; y: number } | null>(null);
   useEffect(() => {

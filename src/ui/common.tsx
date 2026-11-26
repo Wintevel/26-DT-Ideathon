@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { CARDS, depthLabel, ENEMIES, RELICS, SQUADS } from '../game/data';
 import { defOf, tierOf, TIER_NAMES } from '../game/engine';
 import type { CardInst, RunState } from '../game/types';
@@ -11,6 +12,20 @@ const GLYPH: Record<string, JSX.Element> = {
   흡수: <svg width="22" height="14" viewBox="0 0 22 14"><circle cx="8" cy="7" r="5" stroke="currentColor" fill="none" /><circle cx="14" cy="7" r="5" stroke="currentColor" fill="currentColor" fillOpacity=".3" /></svg>,
   상태: <svg width="22" height="14" viewBox="0 0 22 14"><path d="M4 7 H18" stroke="currentColor" strokeDasharray="2 3" /></svg>,
 };
+
+/** 카드 분류의 영문 표기 (번호 밑에 세로로 적는다) */
+const CAT_EN: Record<string, string> = { 전술: 'TACTIC', 거울: 'MIRROR', 흡수: 'ABSORB', 상태: 'STATUS' };
+
+/** 닫힐 때 퇴장 애니메이션을 기다렸다가 onClose를 부른다 */
+export function useClosing(onClose: () => void, ms = 260) {
+  const [closing, setClosing] = useState(false);
+  const close = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    setTimeout(onClose, ms);
+  }, [closing, onClose, ms]);
+  return [closing, close] as const;
+}
 
 export function CardView({ card, id, cost, disabled, selected, onClick, onHover, mini, eroPreview, dataFx }: {
   card?: CardInst; id?: string; cost?: number; disabled?: boolean; selected?: boolean; onClick?: () => void;
@@ -28,13 +43,15 @@ export function CardView({ card, id, cost, disabled, selected, onClick, onHover,
       onMouseLeave={() => onHover?.(false)}
       data-fx={dataFx}
     >
-      {!d.unplayable && <span className="cost">{cost ?? d.cost}</span>}
+      <span className="cside">
+        <span className={`cost ${d.unplayable ? 'none' : ''}`}>{d.unplayable ? '×' : cost ?? d.cost}</span>
+        <span className="cat">{inst.mimic ? 'MIMIC' : CAT_EN[d.cat] ?? d.cat}</span>
+      </span>
       {eroPreview ? <span className="ero">{eroPreview > 0 ? `+${eroPreview}%` : `${eroPreview}%`}</span> : null}
       <span className="nm">{d.name}</span>
       <span className="tx"><Rich text={d.text} /></span>
       {src && <span className="src">{src}</span>}
       <span className="glyph">{GLYPH[d.cat]}</span>
-      <span className="cat">{inst.mimic ? '모사' : d.cat}</span>
     </button>
   );
 }
@@ -63,16 +80,22 @@ export function TopBar({ run, meta, onDeck, onRelics, onMenu, onMap }: { run: Ru
 
 export function DeckModal({ cards, title, onClose, onPick }: { cards: CardInst[]; title: string; onClose: () => void; onPick?: (c: CardInst) => void }) {
   const sorted = [...cards].sort((a, b) => (CARDS[a.id].cat + a.id).localeCompare(CARDS[b.id].cat + b.id));
+  const [closing, close] = useClosing(onClose, 220);
   return (
-    <div className="modal" onClick={onClose}>
-      <div className="box" onClick={(e) => e.stopPropagation()}>
-        <div className="head" style={{ padding: 0, border: 0 }}>
-          <div><div className="kicker">DECK</div><h2>{title}</h2></div>
-          <span className="spacer" />
-          <button className="btn ghost" onClick={onClose}>닫기</button>
+    <div className={`deckview ${closing ? 'closing' : ''}`} onClick={close}>
+      <div className="dv-in" onClick={(e) => e.stopPropagation()}>
+        <i className="dv-c tl" /><i className="dv-c tr" /><i className="dv-c bl" /><i className="dv-c br" />
+        <div className="dv-head">
+          <div className="kicker">DECK</div>
+          <h2>{title}</h2>
+          <button className="dv-x" onClick={close} aria-label="닫기"><span /><span /></button>
         </div>
-        <div className="grid">
-          {sorted.map((c) => <CardView key={c.uid} card={c} mini onClick={onPick ? () => onPick(c) : undefined} />)}
+        <div className="dv-grid">
+          {sorted.map((c, i) => (
+            <div key={c.uid} className="dv-slot" style={{ ['--k' as string]: Math.min(i, 24) }}>
+              <CardView card={c} mini onClick={onPick ? () => onPick(c) : undefined} />
+            </div>
+          ))}
         </div>
       </div>
     </div>

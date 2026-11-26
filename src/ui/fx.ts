@@ -25,12 +25,13 @@ export function floatText(key: string, text: string, cls = '', dy = 0) {
   layer().appendChild(d);
   d.animate(
     [
-      { opacity: 0, transform: 'translate(-50%,-30%) scale(.7)' },
-      { opacity: 1, transform: 'translate(-50%,-50%) scale(1.15)', offset: 0.2 },
-      { opacity: 1, transform: 'translate(-50%,-110%) scale(1)', offset: 0.7 },
-      { opacity: 0, transform: 'translate(-50%,-150%) scale(1)' },
+      { opacity: 0, transform: 'translate(-50%,-30%) scale(.5)' },
+      { opacity: 1, transform: 'translate(-50%,-50%) scale(1.35)', offset: 0.15 },
+      { opacity: 1, transform: 'translate(-50%,-70%) scale(1)', offset: 0.3 },
+      { opacity: 1, transform: 'translate(-50%,-120%) scale(1)', offset: 0.78 },
+      { opacity: 0, transform: 'translate(-50%,-160%) scale(1)' },
     ],
-    { duration: 1000, easing: 'ease-out' },
+    { duration: 1400, easing: 'ease-out' },
   ).onfinish = () => d.remove();
 }
 
@@ -119,16 +120,16 @@ export function slash(key: string, big = false, hurtMe = false) {
         { clipPath: 'inset(0 0 0 0)', opacity: 1, height: '5px', offset: 0.55 },
         { clipPath: 'inset(0 0 0 0)', opacity: 0, height: '1px' },
       ],
-      { duration: 620, delay: i * 110, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' },
+      { duration: 760, delay: i * 120, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' },
     );
   });
-  const n = big ? 9 : 5;
+  const n = big ? 16 : 9;
   for (let k = 0; k < n; k++) {
     const p = document.createElement('b');
     p.className = 'spark';
     box.appendChild(p);
     const a = (-28 + (Math.random() * 60 - 30)) * (Math.PI / 180) + (Math.random() < 0.5 ? Math.PI : 0);
-    const dist = 40 + Math.random() * 60;
+    const dist = 60 + Math.random() * 90;
     p.animate(
       [
         { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
@@ -147,11 +148,12 @@ export function guard(key: string) {
   const [box] = s;
   box.animate(
     [
-      { transform: 'scale(.82)', opacity: 0 },
-      { transform: 'scale(1.02)', opacity: 1, offset: 0.3 },
-      { transform: 'scale(1.08)', opacity: 0 },
+      { transform: 'scale(.7)', opacity: 0 },
+      { transform: 'scale(1.06)', opacity: 1, offset: 0.25 },
+      { transform: 'scale(1.02)', opacity: 1, offset: 0.6 },
+      { transform: 'scale(1.18)', opacity: 0 },
     ],
-    { duration: 650, easing: 'ease-out' },
+    { duration: 900, easing: 'ease-out' },
   ).onfinish = () => box.remove();
 }
 
@@ -178,4 +180,26 @@ export function statusFx(key: string, good: boolean) {
   if (el && !good) el.animate([{ filter: 'none' }, { filter: 'sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)' }, { filter: 'none' }], { duration: 520 });
   if (el && good) el.animate([{ filter: 'none' }, { filter: 'brightness(1.6)' }, { filter: 'none' }], { duration: 480 });
   box.animate([{ opacity: 1 }, { opacity: 1 }], { duration: 1150 }).onfinish = () => box.remove();
+}
+
+/** 화면 전체가 짧게 번쩍인다. hurt = 내가 맞음(붉은 테두리), hit = 큰 타격(흰 섬광) */
+export function flash(kind: 'hurt' | 'hit') {
+  const d = document.createElement('div');
+  d.className = `fx-flash ${kind}`;
+  layer().appendChild(d);
+  d.animate([{ opacity: 1 }, { opacity: 0 }], { duration: kind === 'hurt' ? 520 : 260, easing: 'ease-out' }).onfinish = () => d.remove();
+  const root = document.querySelector('.field') as HTMLElement | null;
+  root?.animate(
+    [{ transform: 'translate(0,0)' }, { transform: 'translate(-6px,3px)' }, { transform: 'translate(5px,-3px)' }, { transform: 'translate(-3px,2px)' }, { transform: 'translate(0,0)' }],
+    { duration: kind === 'hurt' ? 340 : 240 },
+  );
+}
+
+/** 적이 행동할 때 본체 쪽(왼쪽)으로 한 번 달려들었다 돌아온다 */
+export function lunge(key: string) {
+  const el = document.querySelector(`[data-fx="${key}"]`) as HTMLElement | null;
+  el?.animate(
+    [{ transform: 'translateX(0) scale(1)' }, { transform: 'translateX(14px) scale(.97)', offset: 0.3 }, { transform: 'translateX(-46px) scale(1.06)', offset: 0.55 }, { transform: 'translateX(0) scale(1)' }],
+    { duration: 520, easing: 'cubic-bezier(.4,0,.2,1)' },
+  );
 }
