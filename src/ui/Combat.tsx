@@ -9,6 +9,7 @@ import { CardView } from './common';
 import { Icon } from './Icons';
 import { Portrait } from './Portraits';
 import { Emblem } from './Emblem';
+import { DepthScene } from './DepthScene';
 import { Rich } from './Rich';
 import { flash, fly, floatText, guard, lunge, pulse, shake, slash, sleep, statusFx } from './fx';
 
@@ -296,6 +297,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
 
   return (
     <div className="combat" data-tutstep={tutStep?.id} data-depth={s.ctx.depth} data-kind={s.kind}>
+      <DepthScene depth={s.ctx.depth} />
       <div className="field">
         <div className="depth-tag">DEPTH {depthLabel(s.ctx.depth)} · {depthDef(s.ctx.depth).name}</div>
         <div className="turnno">T{String(s.turn).padStart(2, '0')}</div>

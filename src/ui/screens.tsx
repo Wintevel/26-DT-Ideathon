@@ -5,6 +5,7 @@ import { currentStage, nodeById, priceOf, reachable, STAGES, CHAPTER_COUNT, type
 import type { CardInst, MapNode, MetaSave, RunState } from '../game/types';
 import { CardView, DeckModal } from './common';
 import { Emblem } from './Emblem';
+import { DepthScene } from './DepthScene';
 import { DEPTH_ICON, Icon, SQUAD_ICON } from './Icons';
 import { Portrait } from './Portraits';
 import { Rich } from './Rich';
@@ -350,6 +351,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
 
   return (
     <div className="screen depth-amb" data-depth={run.depth} style={{ minHeight: 'auto', flex: 1 }}>
+      <DepthScene depth={run.depth} className="dim" />
       <div className="map-wrap">
         <div className="map-head">
           <div>
@@ -674,22 +676,19 @@ export function ChapterView({ run, onContinue }: { run: RunState; onContinue: ()
   }, [onContinue]);
   const bossId = CHAPTERS[cur].boss;
   return (
-    <div className={`screen chapter-screen depth-amb`} data-depth={run.depth} onClick={onContinue}>
-      <div className="ch-star" aria-hidden><Emblem size={520} /></div>
+    <div className="screen chapter-screen" onClick={onContinue}>
+      <DepthScene depth={run.depth} className="dim" />
       <div className="ch-head">
         <div className="k">DEPTH {depthLabel(run.depth)} · {depthDef(run.depth).name}</div>
-        <h2>CHAPTER {String(cur + 1).padStart(2, '0')}<span>{CHAPTERS[cur].name}</span></h2>
+        <h2><b>CHAPTER</b> <span>{String(cur + 1).padStart(2, '0')}</span></h2>
+        <div className="ch-ko">{CHAPTERS[cur].name}</div>
       </div>
-      <div className="ch-orbs">
+      <div className="ch-row">
         {CHAPTERS.map((c, i) => (
-          <div key={c.no} className={`ch-orb-wrap ${i < cur ? 'done' : i === cur ? 'now' : 'next'}`} style={{ ['--k' as string]: i }}>
-            <div className="ch-lbl">{c.en}</div>
-            <div className="ch-orb">
-              <b>{c.no}</b>
-              {i < cur && <span className="ch-chk">✓</span>}
-            </div>
+          <div key={c.no} className={`ch-step ${i < cur ? 'done' : i === cur ? 'now' : 'next'}`} style={{ ['--k' as string]: i }}>
+            <div className="ch-dia"><b>{String(c.no).padStart(2, '0')}</b></div>
+            <div className="ch-en">{i < cur ? 'CLEAR' : i === cur ? 'NOW' : 'LOCKED'} · {c.en}</div>
             <div className="ch-name">{c.name}</div>
-            {i < CHAPTERS.length - 1 && <i className={`ch-line ${i < cur ? 'on' : ''}`} />}
           </div>
         ))}
       </div>
@@ -701,13 +700,13 @@ export function ChapterView({ run, onContinue }: { run: RunState; onContinue: ()
           const isBoss = shown?.type === 'boss';
           return (
             <div key={si} className={`ch-node ${visited ? 'v' : ''} ${isBoss ? 'boss' : ''}`} style={{ ['--k' as string]: si }}>
-              {isBoss ? <Portrait kind={bossId} squad={run.squad} size={54} /> : <Icon name={shown ? NODE_ICON[shown.type] : 'unknown'} size={18} />}
+              {isBoss ? <Portrait kind={bossId} squad={run.squad} size={58} bare /> : <Icon name={shown ? NODE_ICON[shown.type] : 'unknown'} size={16} />}
             </div>
           );
         })}
       </div>
-      <div className="ch-boss mono">BOSS · {ENEMIES[bossId].name}</div>
-      <div className="ch-hint">아무 곳이나 클릭하면 계속합니다</div>
+      <div className="ch-boss">BOSS · {ENEMIES[bossId].name}</div>
+      <div className="ch-hint">CLICK ANYWHERE · 아무 곳이나 누르면 계속합니다</div>
     </div>
   );
 }
