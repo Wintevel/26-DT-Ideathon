@@ -6,7 +6,7 @@ import { canPlace, cellsOf, GRID, occupied, type Placement } from '../game/relic
 import { Icon } from './Icons';
 import { Rich } from './Rich';
 
-const TONES = ['#46e8c0', '#f2f2ee', '#8fb3ff', '#ffd54f', '#b98cff', '#ff9a8a'];
+const TONES = ['#ffb36b', '#f2f2ee', '#8fb3ff', '#ffd54f', '#b98cff', '#ff9a8a'];
 const toneOf = (relics: string[], id: string) => TONES[relics.indexOf(id) % TONES.length];
 
 function Shape({ id, rot = 0, tone, size = 11 }: { id: string; rot?: number; tone: string; size?: number }) {
