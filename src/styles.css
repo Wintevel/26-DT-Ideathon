@@ -1524,3 +1524,18 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .node.elite.picked .ty, .node.elite.picked .go { color: #fff; }
 .node.elite.reach:hover { background: var(--danger); color: #fff; }
 .node.elite.reach:hover .ty, .node.elite.reach:hover .go { color: #fff; }
+
+/* v15 — map re-entry: node wake flash without mint, elite flashes red */
+@keyframes nodeOn {
+  0% { opacity: .25; border-color: var(--line2); filter: grayscale(1) brightness(.5); }
+  40% { opacity: 1; filter: invert(1); border-color: var(--fg); }
+  60% { opacity: .4; filter: none; }
+  100% { opacity: 1; border-color: var(--fg); filter: none; }
+}
+@keyframes nodeOnE {
+  0% { opacity: .25; border-color: var(--line2); filter: grayscale(1) brightness(.5); }
+  40% { opacity: 1; border-color: var(--danger); box-shadow: 0 0 18px 3px rgba(255,74,58,.55); }
+  60% { opacity: .4; }
+  100% { opacity: 1; border-color: var(--danger); }
+}
+.node.elite.reach.wake { animation: nodeOnE .6s steps(5) var(--wd) both, eliteNode 1.1s ease-in-out calc(var(--wd) + .6s) infinite; }
