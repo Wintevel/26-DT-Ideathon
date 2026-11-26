@@ -10,6 +10,7 @@ import {
 import type { CombatState, FxEvent, MetaSave, RunState } from '../game/types';
 import { depthLabel, META } from '../game/data';
 import { Combat } from './Combat';
+import { Emblem } from './Emblem';
 import { DeckModal, TopBar } from './common';
 import { CodexView, TreeView } from './MetaScreens';
 import { GuideView } from './Guide';
@@ -96,8 +97,10 @@ export function App() {
     const r = newRun('scout', -1, []);
     const st = startCombat(r, ['patrol'], 'normal', [], []);
     setCombat({ s: st.state, ev: st.events, key: Date.now() });
+    setTutIntro(true);
     setScreen('tutorial');
   };
+  const [tutIntro, setTutIntro] = useState(false);
 
   const clearNode = (r: RunState) => {
     const x = structuredClone(r);
@@ -261,7 +264,21 @@ export function App() {
       {screen === 'depth' && <DepthSelect depth={depth} setDepth={setDepth} onBack={T(() => setScreen('hub'))} onNext={T(() => setScreen('squad'))} />}
       {screen === 'squad' && <SquadSelect depth={depth} onBack={T(() => setScreen('depth'))} onLaunch={T(launch)} />}
       {screen === 'map' && run && <MapView key={run.pos ?? 'start'} run={run} onEnter={T(enterNode)} onDeck={() => setModal('deck')} onRelics={() => setModal('relic')} />}
-      {screen === 'tutorial' && combat && <Combat key={combat.key} tutorial initial={combat.s} introEvents={combat.ev} onEnd={T(() => { setCombat(null); setScreen('hub'); })} onRetreat={T(() => { setCombat(null); setScreen('hub'); })} />}
+      {screen === 'tutorial' && tutIntro && (
+        <div className="screen tut-intro">
+          <div className="ti-in">
+            <Emblem size={120} />
+            <h1>안녕하세요!</h1>
+            <p>게임 플레이 방식을 알려드리겠습니다.</p>
+            <small>훈련용 복제체 하나와 싸우며 적의 의도, 카드 내기, 모사, 침식, 턴 종료를 차례로 익힙니다. 화면의 마우스를 따라 해 보세요.</small>
+            <div className="ti-btns">
+              <button className="btn ghost" onClick={T(() => { setCombat(null); setScreen('hub'); })}>돌아가기</button>
+              <button className="btn solid" onClick={T(() => { setTutIntro(false); setCombat((c) => (c ? { ...c, key: Date.now() } : c)); })}>시작하기 →</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {screen === 'tutorial' && !tutIntro && combat && <Combat key={combat.key} tutorial initial={combat.s} introEvents={combat.ev} onEnd={T(() => { setCombat(null); setScreen('hub'); })} onRetreat={T(() => { setCombat(null); setScreen('hub'); })} />}
       {screen === 'combat' && combat && run && <Combat
         key={combat.key}
         hud={{

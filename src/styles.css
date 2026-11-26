@@ -1216,3 +1216,94 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 :root { --resume: #ff9a3c; }
 .hub .btn.resume { border-color: var(--resume); color: var(--resume); background: rgba(255,154,60,.08); }
 .hub .btn.resume:hover:not(:disabled) { background: var(--resume); color: #1a0d00; }
+
+/* ───────── v10 ───────── */
+/* 기억 파편 = 거울 비눗방울 무지갯빛 */
+:root { --bubble: linear-gradient(100deg, #ffb6e9 0%, #b5e8ff 25%, #d7c2ff 50%, #b9ffe0 72%, #fff1b0 88%, #ffb6e9 100%); }
+.frag-c { background: var(--bubble); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; animation: bubbleShift 5s linear infinite; }
+@keyframes bubbleShift { to { background-position: 220% 0; } }
+.ic-fragment { animation: bubbleHue 5s linear infinite; color: #d7c2ff; filter: drop-shadow(0 0 3px rgba(190,220,255,.45)); }
+@keyframes bubbleHue { 0% { color: #ffb6e9; } 25% { color: #b5e8ff; } 50% { color: #d7c2ff; } 75% { color: #b9ffe0; } 100% { color: #ffb6e9; } }
+
+/* 심도: DEPTH 글자를 숫자 왼쪽에 같은 글꼴로 */
+.dp-d b { display: flex; align-items: baseline; gap: 14px; font-size: 76px; }
+.dp-d b span { font-family: var(--display); font-size: inherit; letter-spacing: .02em; }
+/* 심도 탑: 역피라미드, 테두리 + 그라데이션, 민트 없음 */
+.t-cable { stroke: var(--fg); }
+.t-probe rect { stroke: var(--fg); }
+.t-probe text { fill: var(--fg); }
+.t-layer polygon { fill: rgba(10,10,10,.55); stroke: var(--line2); }
+.t-layer .f-l, .t-layer .f-r, .t-layer .f-top { fill: rgba(10,10,10,.55); }
+.t-layer.fill polygon { stroke: #cfcfc8; }
+.t-layer.fill .f-l { fill: url(#tgL); } .t-layer.fill .f-r { fill: url(#tgR); } .t-layer.fill .f-top { fill: rgba(242,242,238,.12); }
+.t-layer.fill text { fill: var(--fg); }
+.t-layer.on polygon { stroke: #ffffff; stroke-width: 2; }
+.t-layer.on .f-l { fill: url(#tgOn); } .t-layer.on .f-r { fill: url(#tgL); } .t-layer.on .f-top { fill: rgba(255,255,255,.3); }
+.t-layer.on { filter: drop-shadow(0 0 10px rgba(255,255,255,.28)); }
+.t-layer.on text { fill: #fff; }
+.dp-name small { color: var(--fg); }
+.dp-stats { grid-template-columns: repeat(3, 1fr); }
+.dp-stats b.ero-c { color: var(--ero); }
+
+/* 소장품: 격자는 왼쪽 빈 화면에, 서랍은 목록만 */
+.rg-modal { display: flex; }
+.rg-stage { flex: 1; display: grid; place-items: center; padding: 24px; min-width: 0; animation: rgStageIn .4s ease both; }
+.rg-modal.closing .rg-stage { animation: dvOut .25s ease forwards; }
+@keyframes rgStageIn { from { opacity: 0; transform: scale(.94); } }
+.rg-stage-in { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.rg-stage-in .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .3em; color: var(--mute); }
+.rg-stage .rg-grid { grid-template-columns: repeat(3, 116px); grid-template-rows: repeat(3, 116px); gap: 6px; padding: 10px; border-color: var(--fg); }
+.rg-stage .rg-cell { font-size: 12px; padding: 6px; text-align: center; }
+.rg-stage .rg-help { max-width: 380px; text-align: center; }
+.rg-stage .rg-held { flex-direction: row; align-items: center; gap: 14px; }
+@media (max-width: 760px) { .rg-stage { display: none; } }
+
+/* 튜토리얼 */
+.tut-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.tut-box .tut-nav .btn { align-self: auto; }
+.tut-box .tut-nav .btn.ghost { background: transparent; color: var(--mute); border-color: var(--line2); }
+.tut-box .tut-nav .btn.ghost:disabled { opacity: .3; }
+.tut-cursor { position: fixed; left: 0; top: 0; z-index: 120; pointer-events: none; opacity: 0; transition: opacity .3s; margin: -2px 0 0 -3px; }
+.tut-cursor svg { position: relative; z-index: 2; filter: drop-shadow(0 3px 6px rgba(0,0,0,.6)); }
+.tut-cursor i { position: absolute; left: -16px; top: -16px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--turn); opacity: 0; }
+.tut-cursor.click svg { animation: tcPress .3s ease; }
+.tut-cursor.click i { animation: tcRing .6s ease-out; }
+@keyframes tcPress { 50% { transform: scale(.82); } }
+@keyframes tcRing { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
+.tut-intro { align-items: center; justify-content: center; }
+.ti-in { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; width: min(520px, 100%); padding: 24px; }
+.ti-in h1 { margin: 10px 0 0; font-size: 40px; animation: rwIn .5s ease .2s both; }
+.ti-in p { margin: 0; font-size: 18px; animation: rwIn .5s ease .45s both; }
+.ti-in small { color: var(--mute); line-height: 1.7; font-size: 13.5px; animation: rwIn .5s ease .7s both; }
+.ti-btns { display: flex; gap: 10px; margin-top: 14px; animation: rwIn .5s ease .9s both; }
+.ti-btns .btn.solid { background: var(--turn); border-color: var(--turn); color: #1a1800; }
+.dp-name strong { white-space: nowrap; }
+
+/* v11 — combat sci-fi backdrop */
+.combat { isolation: isolate; overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 38%, rgba(120, 90, 255, .10), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 15% 20%, rgba(60, 200, 255, .06), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 85% 25%, rgba(169, 116, 255, .07), transparent 70%),
+    linear-gradient(180deg, #07080d 0%, #0b0d16 55%, #06070b 100%); }
+.combat::before { content: ''; position: absolute; left: -50%; right: -50%; bottom: -10%; height: 62%; z-index: -1; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(140, 150, 255, .16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140, 150, 255, .16) 1px, transparent 1px);
+  background-size: 64px 64px;
+  transform: perspective(520px) rotateX(62deg); transform-origin: 50% 0;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 35%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 35%, #000 70%, transparent 100%);
+  animation: gridDrift 14s linear infinite; }
+.combat::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px),
+    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1px 1px at 33% 9%, rgba(255,255,255,.35), transparent),
+    radial-gradient(1px 1px at 58% 22%, rgba(255,255,255,.4), transparent),
+    radial-gradient(1px 1px at 77% 12%, rgba(255,255,255,.3), transparent),
+    radial-gradient(1px 1px at 91% 30%, rgba(255,255,255,.45), transparent),
+    radial-gradient(1px 1px at 5% 40%, rgba(255,255,255,.3), transparent),
+    radial-gradient(ellipse 120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%); }
+@keyframes gridDrift { from { background-position: 0 0, 0 0; } to { background-position: 0 64px, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .combat::before { animation: none; } }

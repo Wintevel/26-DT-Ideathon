@@ -22,7 +22,7 @@ export function newRun(squadId: string, depth: number, meta: string[]): RunState
     relics: [sq.relic],
     relicGrid: { [sq.relic]: { r: 0, c: 0, rot: 0 } },
     kakpul: sq.kakpul + (meta.includes('awaken') ? 15 : 0),
-    erosion: sq.erosion,
+    erosion: Math.min(90, sq.erosion + (depthDef(depth).startEro ?? 0)),
     mirrorCharges: 4 + (meta.includes('infinite') ? 1 : 0),
     map: genMap(),
     pos: null,

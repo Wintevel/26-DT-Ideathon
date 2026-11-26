@@ -15,7 +15,7 @@ export function MapMenu({ onClose, onSave, onAbandon }: { onClose: () => void; o
         <button className={`btn ghost icon-btn danger ${armed ? 'armed' : ''}`} onClick={() => (armed ? onAbandon() : setArmed(true))}>
           <Icon name="debuff" size={16} /> {armed ? '한 번 더 누르면 출격 취소 (보상 없음)' : '출격 취소하기'}
         </button>
-        <div className="mono mute" style={{ fontSize: 11 }}>ESC · 닫기 / 맵에 있을 때마다 진행 상황이 자동 저장된다</div>
+        <div className="mono mute" style={{ fontSize: 11 }}>ESC · 닫기 / 맵에 있을 때마다 진행 상황이 자동 저장됩니다</div>
       </div>
     </div>
   );

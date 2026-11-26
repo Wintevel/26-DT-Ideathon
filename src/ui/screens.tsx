@@ -49,7 +49,7 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onTutorial, onRes
               <h1>거울 프로토콜</h1>
               <div className="sub">DOPPELGANGER PROTOCOL · 침묵 회랑 침투 작전</div>
             </div>
-            <div className="frag hub-in" style={{ ['--k' as string]: 1 }}><Icon name="fragment" size={16} /> 보유 기억 파편<b>{meta.fragments}</b></div>
+            <div className="frag hub-in" style={{ ['--k' as string]: 1 }}><Icon name="fragment" size={16} /> 보유 기억 파편<b className="frag-c">{meta.fragments}</b></div>
             <div className="menu">
               {onResume && <button className="btn icon-btn resume hub-in" style={{ ['--k' as string]: 2 }} onClick={onResume}><Icon name="descend" size={18} /> 작전 이어하기</button>}
               <button className="btn solid icon-btn hub-in" style={{ ['--k' as string]: 2.5 }} onClick={start} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
@@ -83,8 +83,9 @@ export function Hub({ meta, onStart, onTree, onCodex, onGuide, onTutorial, onRes
 
 // ─── 출격 준비 1: 프로토콜 심도 ────────────────────────
 const DEPTH_ICO = (lv: number) => (lv < 0 ? 'd0' : DEPTH_ICON[lv]);
-// 왼쪽 탑: 아이소메트릭 층이 아래로 쌓인다
-const TW = 250, TX = 56, TD = 34, TH = 52, TY = TD + 6;
+// 왼쪽 탑: 아이소메트릭 층이 아래로 쌓이며 점점 좁아진다 (역피라미드)
+const TW = 290, TX = 56, TK = 0.27, TH = 52, TSHRINK = 22;
+const TD = (TW / 2) * TK, TY = TD + 6;
 const TCX = TX + TW / 2;
 export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number; setDepth: (d: number) => void; onBack: () => void; onNext: () => void }) {
   const d = depthDef(depth);
@@ -136,14 +137,14 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
     return () => window.removeEventListener('keydown', k);
   }, [depth, setDepth, onNext]);
   const rules = DEPTHS.filter((x) => x.lv >= 1 && x.lv <= depth);
-  const ang = (Math.atan2(TD, TW / 2) * 180) / Math.PI;
+  const ang = (Math.atan(TK) * 180) / Math.PI;
   return (
     <div className="screen">
       <div className="head">
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 허브로</button>
         <div><div className="kicker">PRE-LAUNCH · STEP 1 / 2</div><h2>프로토콜 심도 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>탑을 끌어 내리거나 휠을 굴려 심도를 고른다 · ↑↓ 키</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>탑을 끌어 내리거나 휠을 굴려 심도를 고르세요 · ↑↓ 키</span>
       </div>
       <div className="wrap depth-layout">
         <div className="tower-wrap">
@@ -167,22 +168,30 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
               <text x="0" y="30" textAnchor="middle">{depthLabel(depth)}</text>
             </g>
             {/* 층: 아래층부터 그려야 윗층의 윗면이 덮인다 */}
+            <defs>
+              <linearGradient id="tgL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f2f2ee" stopOpacity=".34" /><stop offset="1" stopColor="#f2f2ee" stopOpacity=".04" /></linearGradient>
+              <linearGradient id="tgR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f2f2ee" stopOpacity=".18" /><stop offset="1" stopColor="#f2f2ee" stopOpacity=".02" /></linearGradient>
+              <linearGradient id="tgOn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity=".7" /><stop offset="1" stopColor="#ffffff" stopOpacity=".12" /></linearGradient>
+            </defs>
             {DEPTHS.map((x, i) => ({ x, i })).reverse().map(({ x, i }) => {
               const t = layerTop(i);
               const fill = x.lv <= depth;
               const on = x.lv === depth;
-              const L = `${TX},${t} ${TCX},${t + TD} ${TCX},${t + TD + TH} ${TX},${t + TH}`;
-              const R = `${TCX},${t + TD} ${TX + TW},${t} ${TX + TW},${t + TH} ${TCX},${t + TD + TH}`;
-              const T = `${TX},${t} ${TCX},${t - TD} ${TX + TW},${t} ${TCX},${t + TD}`;
+              // 위층일수록 넓고 아래로 갈수록 좁다. 층마다 앞 꼭짓점 높이(d)도 폭에 맞춰 줄인다.
+              const w = TW - i * TSHRINK * 2, x0 = TCX - w / 2, x1 = TCX + w / 2, d = (w / 2) * TK;
+              const tt = t + (TD - d); // 앞 꼭짓점이 같은 높이에 오도록 뒤 모서리를 내린다
+              const L = `${x0},${tt} ${TCX},${t + TD} ${TCX},${t + TD + TH} ${x0},${tt + TH}`;
+              const R = `${TCX},${t + TD} ${x1},${tt} ${x1},${tt + TH} ${TCX},${t + TD + TH}`;
+              const T = `${x0},${tt} ${TCX},${tt - d} ${x1},${tt} ${TCX},${t + TD}`;
               return (
                 <g key={x.lv} className={`t-layer ${fill ? 'fill' : ''} ${on ? 'on' : ''} ${x.lv < 0 ? 'easy' : ''} ${x.lv === MAX_DEPTH ? 'last' : ''}`} style={{ ['--i' as string]: i }}>
-                  {i === 0 && <polygon className="f-top" points={T} />}
+                  <polygon className="f-top" points={T} />
                   <polygon className="f-l" points={L} />
                   <polygon className="f-r" points={R} />
-                  <g transform={`translate(${TX + 18} ${t + 33}) skewY(${ang})`}>
+                  <g transform={`translate(${x0 + 14} ${tt + 30}) skewY(${ang})`}>
                     <text className="t-code">{depthLabel(x.lv)}</text>
                   </g>
-                  <g transform={`translate(${TCX + 14} ${t + TD + 22}) skewY(${-ang})`}>
+                  <g transform={`translate(${TCX + 12} ${t + TD + 22}) skewY(${-ang})`}>
                     <text className="t-name">{x.name}</text>
                   </g>
                 </g>
@@ -196,8 +205,7 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
         <aside className="depth-panel" key={depth}>
           <div className="dp-top">
             <div className="dp-d">
-              <span className="k">DEPTH</span>
-              <b>{depthLabel(depth)}</b>
+              <b><span>DEPTH</span>{depthLabel(depth)}</b>
             </div>
             <div className="dp-name">
               <span className="dp-ic"><Icon name={DEPTH_ICO(depth)} size={34} stroke={1.3} /></span>
@@ -206,7 +214,8 @@ export function DepthSelect({ depth, setDepth, onBack, onNext }: { depth: number
           </div>
           <div className="dp-stats">
             <div><span><Icon name="heart" size={15} /> 적 기본 체력</span><b>{Math.round(d.mult * 100)}%</b></div>
-            <div><span><Icon name="fragment" size={15} /> 기억 파편</span><b>×{d.frag}</b></div>
+            <div><span><Icon name="fragment" size={15} /> 기억 파편</span><b className="frag-c">×{d.frag}</b></div>
+            <div><span><Icon name="erosion" size={15} /> 시작 침식</span><b className="ero-c">+{d.startEro ?? 0}%</b></div>
           </div>
           <div className="dp-debuff">
             <span className="k"><Icon name="debuff" size={15} /> 기본 난이도 디버프</span>
@@ -238,9 +247,9 @@ export function SquadSelect({ depth, onBack, onLaunch }: { depth: number; onBack
     <div className="screen">
       <div className="head">
         <button className="btn ghost icon-btn" onClick={onBack}><Icon name="back" size={16} /> 심도 선택</button>
-        <div><div className="kicker">PRE-LAUNCH · STEP 2 / 2 · DEPTH {depthLabel(depth)} {depthDef(depth).name}</div><h2>전술 분대 선택</h2></div>
+        <div><div className="kicker">PRE-LAUNCH · STEP 2 / 2 · DEPTH {depthLabel(depth)} {depthDef(depth).name}</div><h2>탐사 방식 선택</h2></div>
         <span className="spacer" />
-        <span className="mono mute" style={{ fontSize: 12 }}>분대를 누르면 특징과 시작 구성이 펼쳐진다</span>
+        <span className="mono mute" style={{ fontSize: 12 }}>탐사를 누르면 특징과 시작 구성이 펼쳐집니다</span>
       </div>
       <div className="wrap">
         <div className="squad-row">
@@ -421,7 +430,7 @@ export function MapView({ run, onEnter, onDeck, onRelics }: { run: RunState; onE
               ))}
             </div>
           )}
-          <div className="rp-next mono mute">이후 연결 {pk.next.length}갈래 · 다른 후보는 이번 구역에서 닫힌다</div>
+          <div className="rp-next mono mute">이후 연결 {pk.next.length}갈래 · 다른 후보는 이번 구역에서 닫힙니다</div>
           <button className="btn solid icon-btn rp-go" onClick={() => onEnter(pk.id)}>루트 확정 <Icon name="descend" size={16} /></button>
         </aside>
       )}
@@ -483,7 +492,7 @@ export function RewardView({ run, reward, meta, onDone }: { run: RunState; rewar
       <div className="center-wrap">
         <div className="big-title clear-rise">CLEAR</div>
         <div className="rw-body">
-          <div className="mono mute">{reward.boss ? '보스 격파 · 마지막 카드 1장을 고르면 작전 결과로 넘어간다' : <>구역 확보 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</>}</div>
+          <div className="mono mute">{reward.boss ? '보스 격파 · 마지막 카드 1장을 고르면 작전 결과로 넘어갑니다' : <>구역 확보 · 각뿔 +{reward.kakpul}{reward.relic ? ` · 소장품 [${RELICS[reward.relic].name}] 획득` : ''}</>}</div>
 
           {hasAbs && (
             <section className="rw-sec abs">
@@ -607,7 +616,7 @@ export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: 
     win: '구역 정화 완료. 거울 속의 당신을 넘어섰다.',
     eroded: '침식 100%. 당신은 원형이 되었다.',
     lose: '신호 소실. 본체의 기록이 회수된다.',
-    abort: '출격을 취소했다. 이번 작전의 보상은 없지만 기록은 남는다.',
+    abort: '',
   }[outcome];
   const st = run.stats;
   const top = useMemo(() => Object.entries(st.playCounts).sort((a, b) => b[1] - a[1]).slice(0, 3), [st]);
@@ -630,7 +639,7 @@ export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: 
       <div className="center-wrap" style={{ justifyContent: 'center' }}>
         <Emblem size={150} erosion={outcome === 'eroded' ? 100 : run.erosion} />
         <div className={`big-title ${outcome !== 'win' ? 'out' : ''} ${outcome === 'abort' ? 'abort' : ''}`}>{title}</div>
-        <div className="mute">{sub}</div>
+        {sub && <div className="mute">{sub}</div>}
         <div className="mono mute" style={{ fontSize: 11, letterSpacing: '.14em', marginTop: 4 }}>{sq?.name ?? run.squad} · DEPTH {depthLabel(run.depth)} {depthDef(run.depth).name} · 최종 체력 {run.hp}/{run.maxHp}</div>
         <div className="runstats">
           {cells.map(([ic, k, v], i) => (
@@ -639,12 +648,12 @@ export function ResultView({ outcome, run, settle, archived, newCodex, onHub }: 
         </div>
         <div className="settle">
           {settle.lines.map(([k, v]) => <div key={k}><span>{k}</span><span>{v ? `+${v}` : ''}</span></div>)}
-          <div className="tot"><span>획득 기억 파편</span><span>+{settle.total}</span></div>
+          <div className="tot"><span>획득 기억 파편</span><span className="frag-c">+{settle.total}</span></div>
         </div>
         <div className="mono mute" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.8 }}>
           가장 많이 쓴 카드: {top.map(([id, n]) => `${CARDS[id]?.name} ×${n}`).join(' · ') || '—'}<br />
           도감 신규 기록 {newCodex}건
-          {archived && <><br />이 런의 덱이 원형 기록에 저장되었다. 다음 작전의 아크가 당신을 재현할 수 있다.</>}
+          {archived && <><br />이 런의 덱이 원형 기록에 저장되었습니다. 다음 작전의 아크가 당신을 재현할 수 있습니다.</>}
         </div>
         <div style={{ marginTop: 20 }}><button className="btn solid" onClick={onHub}>허브로 →</button></div>
       </div>
