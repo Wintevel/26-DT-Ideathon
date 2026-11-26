@@ -158,14 +158,17 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
   const ended = useRef(false);
   const [tut, setTut] = useState(tutorial ? 0 : -1);
   const tutBase = useRef(initial);
+  const [tutReady, setTutReady] = useState(false);
   const tutStep = tut >= 0 && tut < TUT.length ? TUT[tut] : null;
   useEffect(() => {
-    if (!tutStep?.done || tut < tutMax.current) return; // 이전으로 돌아간 단계는 자동으로 넘기지 않는다
-    if (tutStep.done(s, tutBase.current)) tutGo(tut + 1);
-  }, [s, tutStep]);
+    // 행동을 마쳐야 다음 버튼이 켜진다 (이미 지나온 단계는 바로 켜짐)
+    if (!tutStep || tutReady) return;
+    if (!tutStep.done || tut < tutMax.current || tutStep.done(s, tutBase.current)) setTutReady(true);
+  }, [s, tutStep, tutReady]);
   const tutMax = useRef(0);
-  const tutGo = (v: number) => { tutBase.current = s; tutMax.current = Math.max(tutMax.current, v); setTut(v >= TUT.length ? -1 : Math.max(0, v)); };
+  const tutGo = (v: number) => { tutBase.current = s; setTutReady(false); tutMax.current = Math.max(tutMax.current, v); setTut(v >= TUT.length ? -1 : Math.max(0, v)); };
   const isBoss = s.kind === 'boss';
+  const isElite = s.kind === 'elite';
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.modal.drawer, .modal .box, .deckview')) setPaused((v) => !v); };
     window.addEventListener('keydown', k);
@@ -178,8 +181,8 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
       setBanner('YOUR TURN');
       setBusy(false);
       playFx(introEvents, s);
-    }, isBoss ? 3300 : 1500);
-    const t2 = setTimeout(() => setBanner(null), isBoss ? 4300 : 2500);
+    }, isBoss ? 3300 : isElite ? 2200 : 1500);
+    const t2 = setTimeout(() => setBanner(null), isBoss ? 4300 : isElite ? 3200 : 2500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -400,10 +403,10 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
         </div>
 
         {intro && (
-          <div className={`scan ${isBoss ? 'boss' : ''}`}>
+          <div className={`scan ${isBoss ? 'boss' : isElite ? 'elite' : ''}`}>
             <div className="line" />
             <div className="msg">
-              <b>{isBoss ? 'SCANNING YOU' : 'SCANNING'}</b>
+              <b>{isBoss ? 'SCANNING YOU' : isElite ? '⚠ EMERGENCY' : 'SCANNING'}</b>
               {isBoss ? (
                 <>
                   {s.archLabel ? `${s.archLabel}을(를) 재현한다` : '아크가 당신의 런 기록을 읽고 있다'}
@@ -414,6 +417,8 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
                     <li style={{ animationDelay: `${0.4 + s.scanned.length * 0.35}s` }}>▸ 침식 {s.erosion}% → 체력 보정 +{5 * Math.floor(s.erosion / 10)}%</li>
                   </ul>
                 </>
+              ) : isElite ? (
+                <>긴급 작전 · 정예 복제체 접근 · 전 인원 교전 준비</>
               ) : (
                 <>복제체 신호 {alive.length}개 감지 · 의도 해독 중</>
               )}
@@ -431,7 +436,8 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
             <p><Rich text={tutStep.text} /></p>
             <div className="tut-nav">
               <button className="btn ghost" disabled={tut === 0} onClick={() => tutGo(tut - 1)}>← 이전</button>
-              <button className="btn solid" onClick={() => tutGo(tut + 1)}>{tut + 1 >= TUT.length ? '닫기' : '다음 →'}</button>
+              {!tutReady && <span className="tut-wait">위 행동을 해 보세요</span>}
+              <button className={`btn solid${tutReady && tutStep.done ? ' go' : ''}`} disabled={!tutReady} onClick={() => tutGo(tut + 1)}>{tut + 1 >= TUT.length ? '닫기' : '다음 →'}</button>
             </div>
           </div>
         )}
