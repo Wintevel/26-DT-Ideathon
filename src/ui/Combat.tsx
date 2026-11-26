@@ -362,7 +362,8 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
           <div data-fx="emblem" style={{ position: 'relative', zIndex: 1, background: 'var(--bg)', borderRadius: '50%' }}>
             {allDone ? (
               <button className="sunend" onClick={doEnd} title="턴 종료" data-tut="end">
-                <SunIcon />
+                <i className="sun-wave-c" /><i className="sun-wave-c w2" />
+                <Emblem size={120} erosion={s.erosion} className="turn-ready" />
                 <span>턴 종료</span>
               </button>
             ) : (
@@ -501,23 +502,6 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
         </div>
       </div>
     </div>
-  );
-}
-
-/** 할 수 있는 행동을 다 했을 때 가운데에 뜨는 턴 종료 태양 */
-function SunIcon() {
-  return (
-    <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden>
-      <circle className="sun-wave" cx="60" cy="60" r="30" fill="none" stroke="var(--turn)" />
-      <circle className="sun-wave w2" cx="60" cy="60" r="30" fill="none" stroke="var(--turn)" />
-      <g className="sun-rays">
-        {Array.from({ length: 16 }, (_, i) => (
-          <path key={i} transform={`rotate(${i * 22.5} 60 60)`} d={i % 2 ? 'M60 14 V24' : 'M60 6 V24'} stroke="var(--turn)" strokeWidth={i % 2 ? 1.5 : 2.5} strokeLinecap="round" />
-        ))}
-      </g>
-      <circle cx="60" cy="60" r="22" fill="var(--turn)" />
-      <path d="M52 50 L68 60 L52 70 Z" fill="var(--bg)" />
-    </svg>
   );
 }
 
