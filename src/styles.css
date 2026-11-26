@@ -1560,3 +1560,8 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 /* v17 — map: radar waves overflowing during the entry animation made scrollbars pop in and squeeze the map; hide them */
 .map-scroll { overflow-y: hidden; scrollbar-width: none; }
 .map-scroll::-webkit-scrollbar { display: none; }
+
+/* v18 — no visible scrollbars anywhere (they popped in during animations and squeezed layouts); wheel/touch scrolling still works */
+html, body { overflow: hidden; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
