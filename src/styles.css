@@ -1494,3 +1494,5 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
 .chapter-screen .ch-hint { font-family: var(--mono); font-size: 11px; letter-spacing: .2em; color: var(--mute); animation: blink 1.6s ease-in-out infinite; }
 @media (max-width: 760px) { .ch-step { width: 110px; } .ch-row::before { left: 55px; right: 55px; } .chapter-screen .ch-track { gap: 16px; } .chapter-screen .ch-head h2 { font-size: 40px; } }
 .combat > .depth-scene { opacity: .8; }
+/* 전투 중앙 원: 검은 그라데이션 */
+.combat .axis [data-fx="emblem"] { background: radial-gradient(circle at 50% 38%, #3a3a37 0%, #151514 42%, #030303 72%) !important; box-shadow: 0 0 0 1px rgba(242,242,238,.12), 0 10px 30px rgba(0,0,0,.7); }
