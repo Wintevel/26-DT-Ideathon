@@ -1211,3 +1211,8 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
   .hub-emblem { width: 180px; height: 180px; }
   .hub-emblem .emblem { width: 180px; height: 180px; }
 }
+
+/* 허브: 작전 이어하기 = 주황 */
+:root { --resume: #ff9a3c; }
+.hub .btn.resume { border-color: var(--resume); color: var(--resume); background: rgba(255,154,60,.08); }
+.hub .btn.resume:hover:not(:disabled) { background: var(--resume); color: #1a0d00; }
