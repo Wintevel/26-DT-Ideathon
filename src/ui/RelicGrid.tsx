@@ -5,6 +5,7 @@ import { RELICS } from '../game/data';
 import { canPlace, cellsOf, GRID, occupied, type Placement } from '../game/relicGrid';
 import { Icon } from './Icons';
 import { Rich } from './Rich';
+import { playSound } from './audio';
 
 const TONES = ['#ffb36b', '#f2f2ee', '#8fb3ff', '#ffd54f', '#b98cff', '#ff9a8a'];
 const toneOf = (relics: string[], id: string) => TONES[relics.indexOf(id) % TONES.length];
@@ -50,6 +51,7 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
         d.on = true;
         const p = grid[d.id];
         if (p) { const g = { ...grid }; delete g[d.id]; onChange(g); setRot(p.rot); } else if (held !== d.id) setRot(0);
+        playSound('lift');
         setHeld(d.id);
       }
       setGhost({ x: e.clientX, y: e.clientY });
@@ -65,7 +67,7 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
       const c = cellAt(e.clientX, e.clientY);
       if (c) {
         const p = { r: c[0], c: c[1], rot };
-        if (canPlace(gridRef.current, d.id, p)) { onChange({ ...gridRef.current, [d.id]: p }); setHeld(null); return; }
+        if (canPlace(gridRef.current, d.id, p)) { playSound('place'); onChange({ ...gridRef.current, [d.id]: p }); setHeld(null); return; }
       }
       // 격자 밖이나 놓을 수 없는 칸이면 손에 든 상태로 남긴다
     };
@@ -77,14 +79,15 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
   gridRef.current = grid;
 
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if ((e.key === 'r' || e.key === 'R') && held) setRot((v) => (v + 1) % 4); };
+    const k = (e: KeyboardEvent) => { if ((e.key === 'r' || e.key === 'R') && held) { playSound('rotate'); setRot((v) => (v + 1) % 4); } };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [held]);
 
   const pick = (id: string) => {
     if (!editable || suppressClick.current) return;
-    if (held === id) { setHeld(null); return; }
+    if (held === id) { playSound('close'); setHeld(null); return; }
+    playSound('lift');
     const g = { ...grid };
     const p = g[id];
     if (p) { delete g[id]; onChange(g); setRot(p.rot); } else setRot(0);
@@ -100,7 +103,8 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
     if (!editable || suppressClick.current) return;
     if (held) {
       const p = { r, c, rot };
-      if (canPlace(grid, held, p)) { onChange({ ...grid, [held]: p }); setHeld(null); }
+      if (canPlace(grid, held, p)) { playSound('place'); onChange({ ...grid, [held]: p }); setHeld(null); }
+      else playSound('denied');
       return;
     }
     const id = occ.get(`${r},${c}`);
@@ -145,7 +149,7 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
             <div className="rg-held">
               <Shape id={held} rot={rot} tone={toneOf(relics, held)} size={16} />
               <div><b>{RELICS[held].name}</b><div className="mute" style={{ fontSize: 11 }}>놓을 칸을 누르세요</div></div>
-              <button className="btn ghost icon-btn" onClick={() => setRot((rot + 1) % 4)}><Icon name="recall" size={14} /> 회전</button>
+              <button className="btn ghost icon-btn" onClick={() => { playSound('rotate'); setRot((rot + 1) % 4); }}><Icon name="recall" size={14} /> 회전</button>
             </div>
           )}
         </div>

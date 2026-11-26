@@ -1,5 +1,6 @@
 // 화면 전환: 마지막으로 누른 지점에서 안테나 빔처럼 잘게 쪼갠 사각형이 퍼지며 화면을 덮고, 다시 걷힌다.
 import { useEffect, useRef } from 'react';
+import { playSound } from './audio';
 
 let lastPoint = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 window.addEventListener('pointerdown', (e) => (lastPoint = { x: e.clientX, y: e.clientY }), true);
@@ -39,6 +40,7 @@ export function PixelWipe({ origin, onCovered, onDone }: { origin: { x: number; 
         const d = Math.hypot(c * CELL + CELL / 2 - origin.x, r * CELL + CELL / 2 - origin.y) / maxD;
         delays[r * cols + c] = d * 0.78 + Math.random() * 0.22;
       }
+    playSound('wipeIn');
     let raf = 0;
     let phase: 'cover' | 'reveal' = 'cover';
     let start = performance.now();
@@ -66,6 +68,7 @@ export function PixelWipe({ origin, onCovered, onDone }: { origin: { x: number; 
         if (phase === 'cover') {
           phase = 'reveal';
           onCovered();
+          playSound('wipeOut', .06);
           start = performance.now() + 60;
         } else {
           onDone();
