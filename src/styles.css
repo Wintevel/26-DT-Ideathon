@@ -1556,3 +1556,7 @@ p, li, .storytext, .tx, small { text-wrap: pretty; }
   100% { opacity: 1; border-color: var(--nc); }
 }
 .node.rest.reach.wake, .node.shop.reach.wake { animation: nodeOnC .6s steps(5) var(--wd) both, nodeGlow 1.6s ease-in-out calc(var(--wd) + .6s) infinite; }
+
+/* v17 — map: radar waves overflowing during the entry animation made scrollbars pop in and squeeze the map; hide them */
+.map-scroll { overflow-y: hidden; scrollbar-width: none; }
+.map-scroll::-webkit-scrollbar { display: none; }
