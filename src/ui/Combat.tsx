@@ -86,14 +86,60 @@ function IntentBits({ s, e, it }: { s: CombatState; e: EnemyInst; it: Intent }) 
 export interface CombatHud { kakpul: number; mirrorCharges: number; deckSize: number; relicsOn: number; relics: number; where: string }
 
 /** 플레이 튜토리얼 단계: 상태가 조건을 만족하면 다음으로 넘어간다 */
-const TUT: { id: string; title: string; text: string; done?: (s: CombatState, s0: CombatState) => boolean }[] = [
-  { id: 'intent', title: '적의 의도', text: '적 머리 위 표시는 적이 이번 턴에 할 행동이다. 칼 아이콘은 공격, 숫자는 피해량이다.' },
-  { id: 'card', title: '카드 내기', text: '손패에서 카드를 하나 낸다. 공격 카드는 누른 뒤 적을 고른다. 카드 왼쪽 위 숫자는 쓰는 행동 횟수다.', done: (s, s0) => s.player.energy < s0.player.energy || s.discard.length > s0.discard.length },
-  { id: 'mimic', title: '모사', text: '모사 버튼을 누르고 적을 고른다. 적의 의도가 내 손패로 복제되고, 그 적의 이번 행동은 25% 약해진다.', done: (s) => s.mimicUsed },
-  { id: 'erosion', title: '침식', text: '모사하면 화면 아래 보라색 침식 바가 오른다. 베낄수록 강해지지만 100%가 되면 패배한다.' },
-  { id: 'end', title: '턴 종료', text: '복제한 카드도 내 본다. 할 일을 마치면 노란 턴 종료 버튼을 누른다. 적 단계가 끝나면 다시 내 턴이다.', done: (s) => s.turn >= 2 },
-  { id: 'free', title: '마무리', text: '이제 혼자 해 본다. 적을 쓰러뜨리면 튜토리얼이 끝난다.' },
+const TUT: { id: string; title: string; text: string; cursor: string[]; done?: (s: CombatState, s0: CombatState) => boolean }[] = [
+  { id: 'intent', title: '적의 의도', text: '적 머리 위의 표시는 적이 이번 턴에 할 행동입니다. 칼 아이콘은 공격, 숫자는 피해량이에요.', cursor: ['[data-tut="intent"]'] },
+  { id: 'card', title: '카드 내기', text: '패에서 카드를 하나 내 보세요. 공격 카드는 누른 다음 적을 누르면 됩니다. 카드 왼쪽 위 숫자는 쓰는 행동 횟수예요.', cursor: ['.hand .card:not(:disabled)', '.enemy:not(.dead)'], done: (s, s0) => s.player.energy < s0.player.energy || s.discard.length > s0.discard.length },
+  { id: 'mimic', title: '모사', text: '모사 버튼을 누르고 적을 골라 보세요. 적의 의도가 내 패로 복제되고, 그 적의 이번 행동은 25% 약해집니다.', cursor: ['[data-tut="mimic"]', '.enemy:not(.dead)'], done: (s) => s.mimicUsed },
+  { id: 'erosion', title: '침식', text: '모사하면 화면 아래 보라색 침식 바가 올라갑니다. 베낄수록 강해지지만 100%가 되면 패배해요.', cursor: ['.erobar'] },
+  { id: 'end', title: '턴 종료', text: '복제한 카드도 내 보세요. 할 일을 마쳤으면 노란 턴 종료 버튼을 누릅니다. 적 단계가 끝나면 다시 내 차례예요.', cursor: ['.hand .card:not(:disabled)', '.endbtn'], done: (s) => s.turn >= 2 },
+  { id: 'free', title: '마무리', text: '이제 직접 해 보세요. 적을 쓰러뜨리면 튜토리얼이 끝납니다.', cursor: [] },
 ];
+
+/** 튜토리얼에서 따라 할 곳을 보여 주는 가짜 마우스 */
+function TutCursor({ targets, hidden }: { targets: string[]; hidden: boolean }) {
+  const el = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!targets.length || hidden) return;
+    let alive = true;
+    const pos = { x: window.innerWidth / 2, y: window.innerHeight - 60 };
+    const move = async (x: number, y: number, ms: number) => {
+      const c = el.current;
+      if (!c) return;
+      await c.animate([{ transform: `translate(${pos.x}px, ${pos.y}px)` }, { transform: `translate(${x}px, ${y}px)` }], { duration: ms, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' }).finished.catch(() => {});
+      pos.x = x; pos.y = y;
+    };
+    const loop = async () => {
+      while (alive) {
+        const c = el.current;
+        if (!c) return;
+        pos.x = window.innerWidth / 2; pos.y = window.innerHeight - 40;
+        c.style.opacity = '1';
+        for (const sel of targets) {
+          const t = document.querySelector(sel);
+          if (!t || !alive) continue;
+          const r = t.getBoundingClientRect();
+          await move(r.left + r.width / 2, r.top + Math.min(r.height / 2, 40), 900);
+          if (!alive) return;
+          c.classList.remove('click'); void c.offsetWidth; c.classList.add('click');
+          await sleep(650);
+        }
+        await sleep(700);
+        if (el.current) el.current.style.opacity = '0';
+        await sleep(500);
+      }
+    };
+    loop();
+    return () => { alive = false; };
+  }, [targets, hidden]);
+  if (!targets.length || hidden) return null;
+  return (
+    <div ref={el} className="tut-cursor" aria-hidden>
+      <svg width="26" height="30" viewBox="0 0 26 30"><path d="M3 2 L3 24 L9 18.5 L13 27 L17 25 L13 16.8 L21 16.5 Z" fill="#fff" stroke="#111" strokeWidth="1.6" strokeLinejoin="round" /></svg>
+      <i />
+    </div>
+  );
+}
+
 
 export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, onDeck, onRelics, tutorial }: {
   initial: CombatState; introEvents: FxEvent[]; onEnd: (s: CombatState) => void; onTick?: (v: { hp: number; erosion: number }) => void; onRetreat: () => void;
@@ -114,10 +160,11 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
   const tutBase = useRef(initial);
   const tutStep = tut >= 0 && tut < TUT.length ? TUT[tut] : null;
   useEffect(() => {
-    if (!tutStep?.done) return;
-    if (tutStep.done(s, tutBase.current)) { tutBase.current = s; setTut((v) => v + 1); }
+    if (!tutStep?.done || tut < tutMax.current) return; // 이전으로 돌아간 단계는 자동으로 넘기지 않는다
+    if (tutStep.done(s, tutBase.current)) tutGo(tut + 1);
   }, [s, tutStep]);
-  const tutNext = () => { tutBase.current = s; setTut((v) => (v + 1 >= TUT.length ? -1 : v + 1)); };
+  const tutMax = useRef(0);
+  const tutGo = (v: number) => { tutBase.current = s; tutMax.current = Math.max(tutMax.current, v); setTut(v >= TUT.length ? -1 : Math.max(0, v)); };
   const isBoss = s.kind === 'boss';
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.modal.drawer, .modal .box, .deckview')) setPaused((v) => !v); };
@@ -263,7 +310,7 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
               <h2>전투 일시 정지</h2>
               <button className="btn solid icon-btn" onClick={() => setPaused(false)}><Icon name="launch" size={16} /> 계속하기</button>
               <button className="btn icon-btn" onClick={() => { setPaused(false); onRetreat(); }}><Icon name="back" size={16} /> {tutorial ? '튜토리얼 그만두기' : '맵으로 돌아가기'}</button>
-              <div className="mono mute" style={{ fontSize: 11 }}>{tutorial ? '튜토리얼을 마치지 않고 허브로 돌아간다.' : '맵으로 돌아가면 이 전투는 없던 일이 되고, 전투 전 상태로 노드를 다시 고를 수 있다.'}</div>
+              <div className="mono mute" style={{ fontSize: 11 }}>{tutorial ? '튜토리얼을 마치지 않고 허브로 돌아갑니다.' : '맵으로 돌아가면 이 전투는 없던 일이 되고, 전투 전 상태로 노드를 다시 고를 수 있습니다.'}</div>
             </div>
           </div>
         )}
@@ -373,14 +420,18 @@ export function Combat({ initial, introEvents, onEnd, onTick, onRetreat, hud, on
           </div>
         )}
         {banner && <div className="banner" key={banner + s.turn}>{banner}</div>}
-        {!busy && sel != null && selCard && <div className="hint">대상을 선택한다 · {defOf(selCard).name}</div>}
-        {!busy && mimicMode && <div className="hint">모사할 복제체를 선택한다 · 의도가 손패로 복제된다</div>}
+        {!busy && sel != null && selCard && <div className="hint">대상을 선택하세요 · {defOf(selCard).name}</div>}
+        {!busy && mimicMode && <div className="hint">모사할 복제체를 선택하세요 · 의도가 패로 복제됩니다</div>}
+        {tutStep && !intro && <TutCursor key={`cur-${tutStep.id}`} targets={tutStep.cursor} hidden={busy || paused} />}
         {tutStep && !intro && (
           <div className="tut-box" key={tutStep.id}>
             <div className="k">TUTORIAL · {tut + 1} / {TUT.length}</div>
             <b>{tutStep.title}</b>
             <p><Rich text={tutStep.text} /></p>
-            {!tutStep.done && <button className="btn solid" onClick={tutNext}>{tut + 1 >= TUT.length ? '닫기' : '알겠다 →'}</button>}
+            <div className="tut-nav">
+              <button className="btn ghost" disabled={tut === 0} onClick={() => tutGo(tut - 1)}>← 이전</button>
+              <button className="btn solid" onClick={() => tutGo(tut + 1)}>{tut + 1 >= TUT.length ? '닫기' : '다음 →'}</button>
+            </div>
           </div>
         )}
       </div>

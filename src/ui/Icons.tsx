@@ -63,7 +63,7 @@ const P: Record<string, JSX.Element> = {
 
 export function Icon({ name, size = 18, stroke = 1.6, style, className }: { name: string; size?: number; stroke?: number; style?: CSSProperties; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} className={className} aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} className={`ic-${name} ${className ?? ''}`} aria-hidden>
       {P[name] ?? P.unknown}
     </svg>
   );

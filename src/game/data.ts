@@ -95,7 +95,7 @@ const enemyList: EnemyDef[] = [
   },
   {
     id: 'ark', name: '거울 파수꾼 · 아크', tier: 'boss', hp: [120, 120],
-    desc: '당신의 런 기록을 스캔해 당신의 덱으로 싸운다. 체력이 절반이 되면 역상: 손패를 봉인해 대신 사용한다.',
+    desc: '당신의 런 기록을 스캔해 당신의 덱으로 싸운다. 체력이 절반이 되면 역상: 패를 봉인해 대신 사용한다.',
     pattern: () => ({ kind: 'attack', label: '-', dmg: 1 }), // 엔진에서 직접 처리
   },
 ];
@@ -110,21 +110,21 @@ export const ENCOUNTERS: string[][] = [
   ['patrol', 'mimicer'], ['watcher', 'patrol'], ['devourer'], ['mimicer', 'mimicer'], ['devourer', 'mimicer'], ['watcher', 'mimicer'],
 ];
 
-// ─── 분대 ──────────────────────────────────────────────
+// ─── 탐사 ──────────────────────────────────────────────
 export interface SquadDef { id: string; code: string; name: string; tag: string; desc: string; cards: string[]; relic: string; maxHp: number; kakpul: number; erosion: number; perks: string[] }
 export const SQUADS: SquadDef[] = [
   {
-    id: 'scout', code: 'SQUAD-01', name: '기동 관측 분대', tag: '관찰자 · 정밀 모사', desc: '적게, 정확하게 베낀다. 침식을 낮게 유지하며 오래 버틴다.',
+    id: 'scout', code: 'PROBE-01', name: '기동 관측 탐사', tag: '관찰자 · 정밀 모사', desc: '적게, 정확하게 베낀다. 침식을 낮게 유지하며 오래 버틴다.',
     cards: ['mimicSlash', 'compose'], relic: 'focuser', maxHp: 75, kakpul: 45, erosion: 0,
     perks: ['시작 각뿔 +45', '시작 덱에 [모방 참격], [자아 정돈]', '소장품 [각뿔 집속기]'],
   },
   {
-    id: 'resonance', code: 'SQUAD-02', name: '거울 공명 분대', tag: '분신술사 · 침식 연료', desc: '분신이 카드를 한 번 더 시전한다. 침식을 연료 삼아 폭발한다.',
+    id: 'resonance', code: 'PROBE-02', name: '거울 공명 탐사', tag: '분신술사 · 침식 연료', desc: '분신이 카드를 한 번 더 시전한다. 침식을 연료 삼아 폭발한다.',
     cards: ['afterimage', 'twin'], relic: 'capacitor', maxHp: 75, kakpul: 0, erosion: 20,
     perks: ['시작 덱에 [잔상 복제], [쌍둥이 베기]', '소장품 [거울 축전기]', '초기 침식 +20%'],
   },
   {
-    id: 'bulwark', code: 'SQUAD-03', name: '중장 대칭 분대', tag: '거울 방패 · 반사', desc: '적의 행동을 그대로 되돌려준다. 침식을 묶어 두고 버틴다.',
+    id: 'bulwark', code: 'PROBE-03', name: '중장 대칭 탐사', tag: '거울 방패 · 반사', desc: '적의 행동을 그대로 되돌려준다. 침식을 묶어 두고 버틴다.',
     cards: ['symmetry', 'anchor'], relic: 'plate', maxHp: 92, kakpul: 0, erosion: 0,
     perks: ['최대 체력 92', '시작 덱에 [대칭 반격], [원형의 닻]', '소장품 [전술 방탄판]'],
   },
@@ -132,14 +132,14 @@ export const SQUADS: SquadDef[] = [
 export const BASE_DECK = ['cut', 'cut', 'cut', 'cut', 'guard', 'guard', 'guard', 'guard', 'observe'];
 
 // ─── 심도 ──────────────────────────────────────────────
-export interface DepthDef { lv: number; name: string; mult: number; frag: number; rule: string; tag?: string; debuff?: string }
+export interface DepthDef { lv: number; name: string; mult: number; frag: number; rule: string; tag?: string; debuff?: string; /** 작전 시작 침식(%) */ startEro?: number }
 export const DEPTHS: DepthDef[] = [
   { lv: -1, name: '훈련 관측', mult: 0.75, frag: 0.5, tag: '초보 전용', rule: '처음 접속하는 요원을 위한 얕은 층. 적 체력과 공격력이 낮고, 모든 침식 증가량이 절반이다.' },
   { lv: 0, name: '표준 관측', mult: 1, frag: 1, rule: '기본 규칙. 거울 프로토콜의 모사와 침식을 익힌다.' },
-  { lv: 1, name: '왜곡 반사', mult: 1.2, frag: 1.25, debuff: '일반 적 반향', rule: '일반 적도 3턴마다 당신의 마지막 카드를 반향한다.' },
-  { lv: 2, name: '거울 역행', mult: 1.38, frag: 1.5, debuff: '반향 2회', rule: '반향이 카드를 두 번 따라 쓴다.' },
-  { lv: 3, name: '자아 침식', mult: 1.58, frag: 1.75, debuff: '침식 증가 ×1.5', rule: '모든 침식 증가량 ×1.5.' },
-  { lv: 4, name: '원형 붕괴', mult: 1.8, frag: 2, debuff: '아크 강화', rule: '아크가 카드 5장을 스캔하고 처음부터 역상 상태다.' },
+  { lv: 1, name: '왜곡 반사', mult: 1.2, frag: 1.25, startEro: 10, debuff: '일반 적 반향', rule: '일반 적도 3턴마다 당신의 마지막 카드를 반향한다.' },
+  { lv: 2, name: '거울 역행', mult: 1.38, frag: 1.5, startEro: 20, debuff: '반향 2회', rule: '반향이 카드를 두 번 따라 쓴다.' },
+  { lv: 3, name: '자아 침식', mult: 1.58, frag: 1.75, startEro: 30, debuff: '침식 증가 ×1.5', rule: '모든 침식 증가량 ×1.5.' },
+  { lv: 4, name: '원형 붕괴', mult: 1.8, frag: 2, startEro: 40, debuff: '아크 강화', rule: '아크가 카드 5장을 스캔하고 처음부터 역상 상태다.' },
 ];
 export const MIN_DEPTH = DEPTHS[0].lv;
 export const MAX_DEPTH = DEPTHS[DEPTHS.length - 1].lv;

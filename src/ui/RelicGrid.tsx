@@ -107,20 +107,12 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
     if (id) pick(id);
   };
 
-  const active = relics.filter((id) => id in grid);
   return (
-    <div className={`modal drawer ${closing ? 'closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget && !suppressClick.current) close(); }}>
-      <div className="box rg" onClick={(e) => e.stopPropagation()}>
-        <div className="head" style={{ padding: 0, border: 0 }}>
-          <div><div className="kicker">RELIC MATRIX · 3×3</div><h2>소장품</h2></div>
-          <span className="spacer" />
-          <button className="btn ghost" onClick={close}>닫기</button>
-        </div>
-        <p className="mute rg-help">
-          격자에 들어간 소장품만 효과가 발동한다.{' '}
-          {editable ? <>목록이나 격자에서 블럭을 끌어다 칸에 놓는다. 눌러서 집고 놓아도 된다. <kbd>R</kbd> 회전.</> : '전투 중에는 배치를 바꿀 수 없다.'}
-        </p>
-        <div className="rg-board">
+    <div className={`modal drawer rg-modal ${closing ? 'closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget && !suppressClick.current) close(); }}>
+      {/* 왼쪽 빈 화면: 3×3 격자 */}
+      <div className="rg-stage" onClick={(e) => { if (e.target === e.currentTarget && !suppressClick.current) close(); }}>
+        <div className="rg-stage-in" onClick={(e) => e.stopPropagation()}>
+          <div className="kicker">RELIC MATRIX · 3×3</div>
           <div className="rg-grid" onMouseLeave={() => setHover(null)}>
             {Array.from({ length: GRID * GRID }, (_, i) => {
               const r = Math.floor(i / GRID), c = i % GRID;
@@ -140,21 +132,29 @@ export function RelicDrawer({ relics, grid, editable, onChange, onClose }: {
                   title={id ? RELICS[id].name : undefined}
                   disabled={!editable && !id}
                 >
-                  {id && <span>{RELICS[id].name.slice(0, 2)}</span>}
+                  {id && <span>{RELICS[id].name}</span>}
                 </button>
               );
             })}
           </div>
-          <div className="rg-side">
-            <div className="mono" style={{ fontSize: 12 }}>발동 {active.length} / 보유 {relics.length}</div>
-            {held && (
-              <div className="rg-held">
-                <Shape id={held} rot={rot} tone={toneOf(relics, held)} size={16} />
-                <div><b>{RELICS[held].name}</b><div className="mute" style={{ fontSize: 11 }}>놓을 칸을 누른다</div></div>
-                <button className="btn ghost icon-btn" onClick={() => setRot((rot + 1) % 4)}><Icon name="recall" size={14} /> 회전</button>
-              </div>
-            )}
-          </div>
+          <p className="mute rg-help">
+            격자에 들어간 소장품만 효과가 발동합니다.{' '}
+            {editable ? <>오른쪽 목록이나 격자에서 블럭을 끌어다 칸에 놓으세요. <kbd>R</kbd> 회전.</> : '전투 중에는 배치를 바꿀 수 없습니다.'}
+          </p>
+          {held && (
+            <div className="rg-held">
+              <Shape id={held} rot={rot} tone={toneOf(relics, held)} size={16} />
+              <div><b>{RELICS[held].name}</b><div className="mute" style={{ fontSize: 11 }}>놓을 칸을 누르세요</div></div>
+              <button className="btn ghost icon-btn" onClick={() => setRot((rot + 1) % 4)}><Icon name="recall" size={14} /> 회전</button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="box rg" onClick={(e) => e.stopPropagation()}>
+        <div className="head" style={{ padding: 0, border: 0 }}>
+          <div><div className="kicker">RELICS</div><h2>보유 소장품</h2></div>
+          <span className="spacer" />
+          <button className="btn ghost" onClick={close}>닫기</button>
         </div>
         <div className="rg-list">
           {relics.map((id) => {
